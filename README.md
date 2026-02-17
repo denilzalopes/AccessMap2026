@@ -12,22 +12,22 @@ Built for Family Offices · Private Banking · ESG Funds · Institutional Invest
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Browser (React)                             │
 │                                                                     │
-│  /login  /register  /verify-email          (public routes)         │
-│  /dashboard  /transactions  /tax-lots                              │
-│  /esg  /reports                             (protected routes)     │
+│  /login  /register  /verify-email          (public routes)          │
+│  /dashboard  /transactions  /tax-lots                               │
+│  /esg  /reports                             (protected routes)      │
 └────────────────────────┬────────────────────────────────────────────┘
                          │ HTTPS + JWT Bearer token
                          ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Node.js API  (:5000)                             │
 │                                                                     │
-│  POST /api/auth/register       POST /api/auth/login                │
-│  GET  /api/auth/verify-email                                       │
-│  GET  /api/holdings            GET  /api/holdings/history          │
-│  GET  /api/transactions        GET  /api/transactions/:id          │
-│  GET  /api/tax-lots            GET  /api/tax-lots/summary          │
-│  GET  /api/esg                                                     │
-│  GET  /api/reports/excel       GET  /api/reports/csv/:sheet        │
+│  POST /api/auth/register       POST /api/auth/login                 │
+│  GET  /api/auth/verify-email                                        │
+│  GET  /api/holdings            GET  /api/holdings/history           │
+│  GET  /api/transactions        GET  /api/transactions/:id           │
+│  GET  /api/tax-lots            GET  /api/tax-lots/summary           │
+│  GET  /api/esg                                                      │
+│  GET  /api/reports/excel       GET  /api/reports/csv/:sheet         │
 └──────────────┬───────────────────────────┬──────────────────────────┘
                │ pg                        │ (stub → replace)
                ▼                           ▼
