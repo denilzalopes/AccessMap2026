@@ -1,15 +1,15 @@
 import { format, formatDistanceToNow } from 'date-fns';
 
 export function formatEur(value: number): string {
-  return new Intl.NumberFormat('en-EU', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat('en-EU', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(Number(value ?? 0));
 }
 
 export function formatGrams(value: number): string {
-  return `${new Intl.NumberFormat('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} g`;
+  return `${new Intl.NumberFormat('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value ?? 0))} g`;
 }
 
 export function formatTokens(value: number): string {
-  return new Intl.NumberFormat('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value ?? 0));
 }
 
 export function formatDate(dateStr: string | Date): string {
@@ -25,7 +25,7 @@ export function timeAgo(dateStr: string | Date): string {
 }
 
 export function formatScore(score: number): string {
-  return score.toFixed(1);
+  return Number(score ?? 0).toFixed(1);
 }
 
 export function gainLossClass(value: number): string {

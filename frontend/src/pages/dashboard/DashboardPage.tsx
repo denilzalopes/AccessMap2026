@@ -43,7 +43,7 @@ export default function DashboardPage() {
         <StatCard label="ReGold Tokens" value={formatTokens(h.tokenBalance)} sub="MPToken balance" accent="teal" />
         <StatCard label="Gold Equivalent" value={formatGrams(h.goldGrams)} sub="999 fine recycled gold" accent="teal" />
         <StatCard label="Portfolio Value" value={formatEur(h.currentValueEur)} sub={`${formatEur(h.pricePerGramEur)}/gram`} accent="orange" />
-        <StatCard label="ESG Score" value={`${(esg.sustainabilityScore ?? 0).toFixed(1)} / 100`} sub="Sustainability rating" accent="green" />
+        <StatCard label="ESG Score" value={`${Number(esg.sustainabilityScore ?? 0).toFixed(1)} / 100`} sub="Sustainability rating" accent="green" />
       </div>
 
       {/* Chart */}
@@ -63,7 +63,7 @@ export default function DashboardPage() {
               />
               <YAxis
                 tick={{ fontSize: 11, fill: '#9ca3af' }}
-                tickFormatter={(v: number) => `€${(v / 1000).toFixed(0)}k`}
+                tickFormatter={(v: number) => `€${Number(v / 1000).toFixed(0)}k`}
                 width={56}
               />
               <Tooltip
@@ -85,14 +85,14 @@ export default function DashboardPage() {
             <span className="text-3xl">🌳</span>
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider">Forest saved</p>
-              <p className="text-lg font-semibold text-gray-900">{(esg.forestSavedHectares ?? 0).toFixed(2)} ha</p>
+              <p className="text-lg font-semibold text-gray-900">{Number(esg.forestSavedHectares ?? 0).toFixed(2)} ha</p>
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5 flex items-center gap-4">
             <span className="text-3xl">⚗️</span>
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider">Mercury avoided</p>
-              <p className="text-lg font-semibold text-gray-900">{(esg.mercuryAvoidedKg ?? 0).toFixed(2)} kg</p>
+              <p className="text-lg font-semibold text-gray-900">{Number(esg.mercuryAvoidedKg ?? 0).toFixed(2)} kg</p>
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5 flex items-center gap-4">
