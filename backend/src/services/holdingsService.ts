@@ -9,8 +9,8 @@ export async function getHoldings(investorId: string): Promise<Holdings> {
        w.xrpl_address       AS "walletAddress",
        h.token_balance       AS "tokenBalance",
        h.gold_grams          AS "goldGrams",
-       gp.price_per_gram_eur AS "pricePerGramEur",
-       (h.gold_grams * gp.price_per_gram_eur) AS "currentValueEur",
+       COALESCE(gp.price_per_gram_eur, 61.50) AS "pricePerGramEur",
+       (h.gold_grams * COALESCE(gp.price_per_gram_eur, 61.50)) AS "currentValueEur",
        h.last_updated        AS "lastUpdated"
      FROM holdings h
      JOIN wallets w ON w.id = h.wallet_id

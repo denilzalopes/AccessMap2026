@@ -85,6 +85,16 @@ export async function register(input: RegisterInput): Promise<{ message: string 
       [investorId, walletId]
     );
 
+    // Initialiser les métriques ESG à zéro
+    await client.query(
+      `INSERT INTO esg_metadata
+         (investor_id, total_recycled_gold_grams, forest_saved_hectares,
+          mercury_avoided_kg, soil_erosion_avoided_m3, environmental_cost_saved_eur,
+          sustainability_score, last_calculated)
+       VALUES ($1, 0, 0, 0, 0, 0, 0, NOW())`,
+      [investorId]
+    );
+
     await client.query('COMMIT');
 
   } catch (error) {
