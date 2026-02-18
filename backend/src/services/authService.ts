@@ -20,35 +20,86 @@ export interface RegisterInput {
 }
 
 // Password rules: ≥8 chars, uppercase, lowercase, digit, special char
-export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+export const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
 
 export async function register(input: RegisterInput): Promise<{ message: string }> {
   const { email, password, firstName, lastName, entityType, countryCode, jurisdiction } = input;
 
-  const existing = await pool.query('SELECT id FROM investors WHERE email = $1', [email.toLowerCase()]);
+  const existing = await pool.query(
+    'SELECT id FROM investors WHERE email = $1',
+    [email.toLowerCase()]
+  );
+
   if (existing.rowCount && existing.rowCount > 0) {
     throw new AppError(409, 'An account with this email already exists');
   }
 
   if (!PASSWORD_REGEX.test(password)) {
-    throw new AppError(400, 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character (!@#$%^&*)');
+    throw new AppError(
+      400,
+      'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character (!@#$%^&*)'
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   const verificationToken = crypto.randomBytes(32).toString('hex');
   const investorId = uuidv4();
 
-  await pool.query(
-    `INSERT INTO investors
-       (id, email, password_hash, first_name, last_name, entity_type, country_code, jurisdiction, email_verification_token)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-    [investorId, email.toLowerCase(), passwordHash, firstName, lastName, entityType, countryCode, jurisdiction, verificationToken],
-  );
+  const client = await pool.connect();
 
-  // Fire-and-forget — don't block registration if email delivery fails
+  try {
+    await client.query('BEGIN');
+
+    // Créer l'investisseur
+    await client.query(
+      `INSERT INTO investors
+         (id, email, password_hash, first_name, last_name, entity_type, country_code, jurisdiction, email_verification_token)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [
+        investorId,
+        email.toLowerCase(),
+        passwordHash,
+        firstName,
+        lastName,
+        entityType,
+        countryCode,
+        jurisdiction,
+        verificationToken,
+      ],
+    );
+
+    // Créer automatiquement une wallet "Primary Wallet"
+    const walletId = uuidv4();
+
+    await client.query(
+      `INSERT INTO wallets (id, investor_id, xrpl_address, wallet_label)
+       VALUES ($1, $2, $3, $4)`,
+      [walletId, investorId, 'RL', 'Primary Wallet']
+    );
+
+    // Créer un holding vide pour cette wallet
+    await client.query(
+      `INSERT INTO holdings (investor_id, wallet_id, token_balance, gold_grams)
+       VALUES ($1, $2, 0, 0)`,
+      [investorId, walletId]
+    );
+
+    await client.query('COMMIT');
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  // Fire-and-forget : envoi email de vérification
   sendVerificationEmail(email, verificationToken).catch(() => null);
 
-  return { message: 'Registration successful. Please check your email to verify your account.' };
+  return {
+    message: 'Registration successful. Please check your email to verify your account.',
+  };
 }
 
 export async function verifyEmail(token: string): Promise<{ message: string }> {
@@ -75,12 +126,12 @@ export async function login(email: string, password: string): Promise<LoginRespo
   );
 
   if (!result.rowCount) {
-    // Same error as wrong password to prevent email enumeration
     throw new AppError(401, 'Invalid email or password');
   }
 
   const row = result.rows[0];
   const valid = await bcrypt.compare(password, row.password_hash);
+
   if (!valid) {
     throw new AppError(401, 'Invalid email or password');
   }
@@ -89,12 +140,16 @@ export async function login(email: string, password: string): Promise<LoginRespo
     throw new AppError(403, 'Please verify your email before logging in');
   }
 
-const payload: JwtPayload = { sub: row.id, email: row.email, role: row.role };
-const secret = process.env.JWT_SECRET as string;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const token = (jwt.sign as any)(payload, secret, { expiresIn: '7d' });
+  const payload: JwtPayload = { sub: row.id, email: row.email, role: row.role };
+  const secret = process.env.JWT_SECRET as string;
 
-  await pool.query('UPDATE investors SET last_login = NOW() WHERE id = $1', [row.id]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const token = (jwt.sign as any)(payload, secret, { expiresIn: '7d' });
+
+  await pool.query(
+    'UPDATE investors SET last_login = NOW() WHERE id = $1',
+    [row.id]
+  );
 
   return {
     token,
