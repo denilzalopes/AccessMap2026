@@ -39,8 +39,8 @@ export function TransactionsPage() {
                       {tx.type.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{tx.tokenAmount.toFixed(2)}</td>
-                  <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{tx.goldGrams.toFixed(2)}</td>
+                  <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{Number(tx.tokenAmount ?? 0).toFixed(2)}</td>
+                  <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{Number(tx.goldGrams ?? 0).toFixed(2)}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{formatEur(tx.pricePerToken)}</td>
                   <td className="px-5 py-3.5 text-sm font-medium text-gray-900 text-right">{formatEur(tx.totalCost)}</td>
                   <td className="px-5 py-3.5">

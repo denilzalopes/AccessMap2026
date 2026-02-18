@@ -26,7 +26,7 @@ export function TaxLotsPage() {
       {s && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <StatCard label="Total Cost Basis" value={formatEur(s.totalCostBasis)} sub={`${s.lotCount} open lots`} accent="teal" />
-          <StatCard label="Total Tokens" value={s.totalTokens.toFixed(2)} sub="ReGold across all lots" accent="teal" />
+          <StatCard label="Total Tokens" value={Number(s.totalTokens ?? 0).toFixed(2)} sub="ReGold across all lots" accent="teal" />
           <StatCard
             label="Unrealized Gain / Loss"
             value={formatEur(s.totalUnrealizedGainLoss)}
@@ -51,7 +51,7 @@ export function TaxLotsPage() {
                 <tr key={lot.id} className="hover:bg-gray-50 transition">
                   <td className="px-5 py-3.5 text-sm font-medium text-gray-900">{lot.lotNumber}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-700 whitespace-nowrap">{formatDate(lot.acquisitionDate)}</td>
-                  <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{lot.tokensRemaining.toFixed(2)}</td>
+                  <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{Number(lot.tokensRemaining ?? 0).toFixed(2)}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{formatEur(lot.costBasisPerToken)}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-700 text-right">{formatEur(lot.totalCostBasis)}</td>
                   <td className={clsx('px-5 py-3.5 text-sm font-semibold text-right', gainLossClass(lot.unrealizedGainLoss))}>
