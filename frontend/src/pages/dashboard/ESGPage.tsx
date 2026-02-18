@@ -34,8 +34,8 @@ export function ESGPage() {
   if (error) return <Alert type="error" message={error} />;
   if (!esg) return null;
 
-  const scoreColor = esg.sustainabilityScore >= 70 ? 'from-rebijoux-green to-emerald-600'
-    : esg.sustainabilityScore >= 40 ? 'from-rebijoux-teal to-cyan-600'
+  const scoreColor = (esg.sustainabilityScore ?? 0) >= 70 ? 'from-rebijoux-green to-emerald-600'
+    : (esg.sustainabilityScore ?? 0) >= 40 ? 'from-rebijoux-teal to-cyan-600'
     : 'from-rebijoux-orange to-amber-600';
 
   return (
@@ -50,27 +50,27 @@ export function ESGPage() {
       {/* Score banner */}
       <div className={`rounded-xl bg-gradient-to-r ${scoreColor} p-8 text-white text-center shadow`}>
         <p className="text-sm font-medium uppercase tracking-wider opacity-80">Sustainability Score</p>
-        <p className="mt-2 text-7xl font-bold">{esg.sustainabilityScore.toFixed(0)}</p>
+        <p className="mt-2 text-7xl font-bold">{(esg.sustainabilityScore ?? 0).toFixed(0)}</p>
         <p className="mt-1 text-sm opacity-70">out of 100</p>
         <div className="mt-4 mx-auto max-w-xs bg-white/20 rounded-full h-2">
-          <div className="bg-white rounded-full h-2" style={{ width: `${esg.sustainabilityScore}%` }} />
+          <div className="bg-white rounded-full h-2" style={{ width: `${esg.sustainabilityScore ?? 0}%` }} />
         </div>
       </div>
 
       {/* Totals */}
       <div className="bg-rebijoux-teal/5 border border-rebijoux-teal/20 rounded-lg p-5">
         <p className="text-sm font-medium text-rebijoux-teal">
-          Your portfolio represents <span className="font-bold">{esg.totalRecycledGoldGrams.toFixed(2)} grams</span> of recycled gold —
+          Your portfolio represents <span className="font-bold">{(esg.totalRecycledGoldGrams ?? 0).toFixed(2)} grams</span> of recycled gold —
           avoiding all of the environmental damage that primary extraction of that gold would have caused.
         </p>
       </div>
 
       {/* Impact grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <ImpactCard emoji="🌳" label="Forest Preservation" value={`${esg.forestSavedHectares.toFixed(3)} hectares`} description="Deforestation prevented through recycled gold use" color="border-rebijoux-green" />
-        <ImpactCard emoji="⚗️" label="Mercury Reduction" value={`${esg.mercuryAvoidedKg.toFixed(3)} kg`} description="Mercury pollution avoided vs. primary mining" color="border-rebijoux-teal" />
-        <ImpactCard emoji="🏔️" label="Soil Protection" value={`${esg.soilErosionAvoidedM3.toLocaleString()} m³`} description="Soil erosion and sedimentation prevented" color="border-blue-500" />
-        <ImpactCard emoji="💰" label="Environmental Cost Saved" value={formatEur(esg.environmentalCostSavedEur)} description="Estimated damage costs avoided (Conservation Strategy Fund)" color="border-rebijoux-orange" />
+        <ImpactCard emoji="🌳" label="Forest Preservation" value={`${(esg.forestSavedHectares ?? 0).toFixed(3)} hectares`} description="Deforestation prevented through recycled gold use" color="border-rebijoux-green" />
+        <ImpactCard emoji="⚗️" label="Mercury Reduction" value={`${(esg.mercuryAvoidedKg ?? 0).toFixed(3)} kg`} description="Mercury pollution avoided vs. primary mining" color="border-rebijoux-teal" />
+        <ImpactCard emoji="🏔️" label="Soil Protection" value={`${(esg.soilErosionAvoidedM3 ?? 0).toLocaleString()} m³`} description="Soil erosion and sedimentation prevented" color="border-blue-500" />
+        <ImpactCard emoji="💰" label="Environmental Cost Saved" value={formatEur(esg.environmentalCostSavedEur ?? 0)} description="Estimated damage costs avoided (Conservation Strategy Fund)" color="border-rebijoux-orange" />
       </div>
 
       {/* Methodology note */}
