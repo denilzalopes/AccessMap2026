@@ -12,20 +12,30 @@ export default function DashboardPage() {
   const esgAsync      = useAsync(fetchEsg);
 
   const loading = holdingsAsync.loading || historyAsync.loading || esgAsync.loading;
+  // On ne bloque plus l'affichage pour une erreur 404 (gérée dans api.ts)
   const error = holdingsAsync.error ?? historyAsync.error ?? esgAsync.error;
 
   if (loading) return <PageLoader />;
-  if (error) return <Alert type="error" message={error} />;
+  if (error && !error.includes('404')) return <Alert type="error" message={error} />;
 
-  const h = holdingsAsync.data!;
-  const esg = esgAsync.data ?? {
+  const h = holdingsAsync.data || {
+    investorId: '',
+    walletAddress: 'RL',
+    tokenBalance: 0,
+    goldGrams: 0,
+    pricePerGramEur: 61.50,
+    currentValueEur: 0,
+    lastUpdated: new Date()
+  };
+  const esg = esgAsync.data || {
+    investorId: '',
     totalRecycledGoldGrams: 0,
     forestSavedHectares: 0,
     mercuryAvoidedKg: 0,
     soilErosionAvoidedM3: 0,
     environmentalCostSavedEur: 0,
     sustainabilityScore: 0,
-    lastCalculated: new Date().toISOString(),
+    lastCalculated: new Date()
   };
   const history = historyAsync.data ?? [];
 

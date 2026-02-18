@@ -60,7 +60,20 @@ export async function fetchHoldings(): Promise<Holdings> {
   try {
     const res = await http.get<Holdings>('/holdings');
     return res.data;
-  } catch (err) { return handleError(err); }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return {
+        investorId: '',
+        walletAddress: 'RL',
+        tokenBalance: 0,
+        goldGrams: 0,
+        pricePerGramEur: 61.50,
+        currentValueEur: 0,
+        lastUpdated: new Date()
+      };
+    }
+    return handleError(err);
+  }
 }
 
 export async function fetchHistory(days = 90): Promise<PortfolioSnapshot[]> {
@@ -101,7 +114,21 @@ export async function fetchEsg(): Promise<EsgMetrics> {
   try {
     const res = await http.get<EsgMetrics>('/esg');
     return res.data;
-  } catch (err) { return handleError(err); }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return {
+        investorId: '',
+        totalRecycledGoldGrams: 0,
+        forestSavedHectares: 0,
+        mercuryAvoidedKg: 0,
+        soilErosionAvoidedM3: 0,
+        environmentalCostSavedEur: 0,
+        sustainabilityScore: 0,
+        lastCalculated: new Date()
+      };
+    }
+    return handleError(err);
+  }
 }
 
 // ── Reports ───────────────────────────────────────────────────────────────────
