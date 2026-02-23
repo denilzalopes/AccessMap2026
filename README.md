@@ -80,7 +80,7 @@ Pour lancer l'ensemble de l'environnement (bases de données, Redis, et tous les
 
 2.  **Cloner le dépôt** :
     ```bash
-    git clone https://github.com/denilzalopes/rebijoux-regold-dashboard.git accessmap-project
+    git clone https://github.com/denilzalopes/AccessMap2026.git accessmap-project
     cd accessmap-project
     ```
 

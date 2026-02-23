@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.util.UUID;
+import org.locationtech.jts.geom.Point;
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,7 +22,7 @@ public class Report {
     // For PostGIS GEOGRAPHY(POINT, 4326), a specific library like Hibernate Spatial
     // or a custom type mapping would be needed. For now, representing as String.
     @Column(columnDefinition = "GEOGRAPHY(Point, 4326)")
-    private String location;
+    private Point location;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

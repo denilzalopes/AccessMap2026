@@ -28,6 +28,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setDisplayName(userDetails.getDisplayName());
         user.setAccessibilityPrefs(userDetails.getAccessibilityPrefs());
+        user.setPasswordHash(userDetails.getPasswordHash());
         return userRepository.save(user);
     }
 
