@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: accessmap-postgres
+    environment:
+      POSTGRES_DB: accessmap_auth
+      POSTGRES_USER: accessmap
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: accessmap-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  auth-service:
+    build:
+      context: ./backend-microservices/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_auth
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+      APP_JWT_SECRET: YourSuperSecretKeyThatIsAtLeast256BitsLongAndShouldBeStoredInEnvironmentVariables
+      APP_JWT_EXPIRATION: 900000
+      APP_JWT_REFRESH_EXPIRATION: 604800000
+    depends_on:
+      - postgres
+      - redis
+
+  user-service:
+    build:
+      context: ./backend-microservices/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_user
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      - postgres
+
+  report-service:
+    build:
+      context: ./backend-microservices/report-service
+      dockerfile: Dockerfile
+    container_name: report-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_report
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      - postgres
+
+  map-service:
+    build:
+      context: ./backend-microservices/map-service
+      dockerfile: Dockerfile
+    container_name: map-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_map
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      - postgres
+
+  notification-service:
+    build:
+      context: ./backend-microservices/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_MAIL_HOST: smtp.mailtrap.io
+      SPRING_MAIL_PORT: 2525
+      SPRING_MAIL_USERNAME: your_mailtrap_username
+      SPRING_MAIL_PASSWORD: your_mailtrap_password
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:

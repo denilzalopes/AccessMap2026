@@ -1,284 +1,125 @@
-# ReGold Dashboard
-
-Institutional investor dashboard for the **ReGold MPToken** on XRPL — a claim over allocated, recycled physical gold reserves.
-
-Built for Family Offices · Private Banking · ESG Funds · Institutional Investors
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Browser (React)                             │
-│                                                                     │
-│  /login  /register  /verify-email          (public routes)          │
-│  /dashboard  /transactions  /tax-lots                               │
-│  /esg  /reports                             (protected routes)      │
-└────────────────────────┬────────────────────────────────────────────┘
-                         │ HTTPS + JWT Bearer token
-                         ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Node.js API  (:5000)                             │
-│                                                                     │
-│  POST /api/auth/register       POST /api/auth/login                 │
-│  GET  /api/auth/verify-email                                        │
-│  GET  /api/holdings            GET  /api/holdings/history           │
-│  GET  /api/transactions        GET  /api/transactions/:id           │
-│  GET  /api/tax-lots            GET  /api/tax-lots/summary           │
-│  GET  /api/esg                                                      │
-│  GET  /api/reports/excel       GET  /api/reports/csv/:sheet         │
-└──────────────┬───────────────────────────┬──────────────────────────┘
-               │ pg                        │ (stub → replace)
-               ▼                           ▼
-┌──────────────────────┐       ┌──────────────────────────┐
-│   PostgreSQL 14+     │       │   XRPL Ledger            │
-│                      │       │                          │
-│  investors           │       │  getInvestorTokenBalance │
-│  wallets             │       │  getLedgerTxHistory      │
-│  holdings            │       │  validateTokenIntegrity  │
-│  transactions        │       │                          │
-│  tax_lots            │       │  Testnet / Mainnet       │
-│  esg_metadata        │       └──────────────────────────┘
-│  holdings_history    │
-│  gold_prices         │
-└──────────────────────┘
-```
-
-### Data flow — token distribution
-
-```
-Rebijoux issues ReGold MPToken on XRPL
-        │
-        ▼
-Token distributed to investor XRPL wallet
-        │
-        ▼
-XRPL stub (or real xrpl.js) reads balance + tx history
-        │
-        ▼
-Backend writes to holdings + transactions + tax_lots tables
-        │
-        ▼
-DB trigger auto-calculates esg_metadata
-        │
-        ▼
-Dashboard displays holdings, ESG, P&L, reports
-```
-
----
-
-## Getting started
-
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL 14+
-- npm
-
-### 1 · Database
-
-```bash
-createdb regold_db
-psql -d regold_db -f database/migrations/001_initial_schema.sql
-psql -d regold_db -f database/seeds/demo.sql   # optional demo data
-```
-
-### 2 · Backend
-
-```bash
-cd backend
-npm install
-cp .env.example .env
-# fill in DATABASE_URL and JWT_SECRET
-npm run dev
-```
-
-API available at `http://localhost:5000`
-
-### 3 · Frontend
-
-```bash
-cd frontend
-npm install
-cp .env.example .env
-npm start
-```
-
-Dashboard available at `http://localhost:3000`
-
----
-
-## Secrets management
-
-### Development
-
-Copy `.env.example` → `.env` and fill in values locally. `.env` is git-ignored.
-
-### Production
-
-**Never store secrets in environment files committed to git.**
-
-Recommended options:
-
-| Platform | Tool |
-|---|---|
-| AWS | Secrets Manager or Parameter Store |
-| GCP | Secret Manager |
-| Heroku | Config Vars (encrypted at rest) |
-| Any | [Doppler](https://doppler.com) — works everywhere |
-| Team | [1Password Secrets Automation](https://developer.1password.com/docs/connect) |
-
-At minimum, generate a strong `JWT_SECRET`:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
----
-
-## Running tests
-
-```bash
-# Backend
-cd backend && npm test
-
-# Frontend
-cd frontend && npm test
-
-# With coverage
-cd backend && npm run test:coverage
-```
-
-CI runs automatically on push via `.github/workflows/ci.yml`.
-
----
-
-## API reference
-
-All protected endpoints require `Authorization: Bearer <token>`.
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Create investor account |
-| GET | `/api/auth/verify-email?token=` | Verify email address |
-| POST | `/api/auth/login` | Obtain JWT |
-| GET | `/api/holdings` | Current token balance + value |
-| GET | `/api/holdings/history?days=90` | Portfolio snapshots |
-| GET | `/api/transactions?limit=50` | Transaction history |
-| GET | `/api/transactions/:id` | Single transaction |
-| GET | `/api/tax-lots` | Open tax lots |
-| GET | `/api/tax-lots/summary` | Aggregated cost basis |
-| GET | `/api/esg` | ESG impact metrics |
-| GET | `/api/reports/excel` | Full Excel report download |
-| GET | `/api/reports/csv/transactions` | Transactions CSV |
-| GET | `/api/reports/csv/tax-lots` | Tax lots CSV |
-
----
-
-## XRPL integration
-
-Stubs live in `backend/src/xrpl/mptHandler.ts`. They return mock data and log calls.
-
-To connect a real XRPL node:
-
-```bash
-cd backend && npm install xrpl
-```
-
-Then replace the stub bodies following the comments in that file.
-
-> **Always test on Testnet before Mainnet.**
-> Testnet: `wss://s.altnet.rippletest.net:51233`
-> Mainnet: `wss://xrplcluster.com`
-
----
-
-## Project structure
-
-```
-regold-dashboard/
-├── .github/
-│   └── workflows/ci.yml          CI pipeline
-├── backend/
-│   ├── src/
-│   │   ├── db/pool.ts            PostgreSQL connection pool
-│   │   ├── middleware/           Auth + error handling
-│   │   ├── routes/               Express route handlers
-│   │   ├── services/             Business logic (auth, holdings, ESG…)
-│   │   ├── types/domain.ts       Shared TypeScript interfaces
-│   │   ├── utils/logger.ts       Winston logger
-│   │   ├── xrpl/mptHandler.ts   XRPL stub (replace for production)
-│   │   └── index.ts              App entry point
-│   ├── .env.example
-│   ├── package.json
-│   └── tsconfig.json
-├── database/
-│   ├── migrations/001_initial_schema.sql
-│   └── seeds/demo.sql
-├── frontend/
-│   ├── src/
-│   │   ├── assets/styles/        Tailwind CSS
-│   │   ├── components/
-│   │   │   ├── layout/           AppShell, ProtectedRoute
-│   │   │   └── ui/               Button, Input, StatCard, Alert, Spinner
-│   │   ├── hooks/                useAuth, useAsync
-│   │   ├── pages/
-│   │   │   ├── auth/             Login, Register, VerifyEmail
-│   │   │   └── dashboard/        Dashboard, Transactions, TaxLots, ESG, Reports
-│   │   ├── services/api.ts       Typed API client
-│   │   ├── types/index.ts        TypeScript interfaces
-│   │   ├── utils/format.ts       Currency, date, number formatters
-│   │   ├── App.tsx
-│   │   └── index.tsx
-│   ├── .env.example
-│   ├── package.json
-│   ├── tailwind.config.js
-│   └── tsconfig.json
-└── README.md
-```
-
----
-
-## Deployment
-
-### Frontend — Vercel (recommended)
-
-```bash
-cd frontend && npm run build
-# push to GitHub, connect repo in Vercel
-# set REACT_APP_API_URL env var in Vercel dashboard
-```
-
-### Backend — Railway / Render / Heroku
-
-```bash
-cd backend && npm run build
-# set all .env vars in platform dashboard
-# start command: node dist/index.js
-```
-
-### Database — Neon / Supabase / AWS RDS
-
-Create a managed PostgreSQL instance, run the migration, set `DATABASE_URL` with SSL.
-
----
-
-## ESG methodology
-
-Impact factors from [Conservation Strategy Fund Mining Calculator](https://miningcalculator.conservation-strategy.org/):
-
-| Per 1 kg recycled gold | Prevented impact |
-|---|---|
-| Forest | 7 hectares deforestation |
-| Mercury | 2.6 kg pollution |
-| Soil erosion | 14,492.75 m³ |
-| Environmental cost | €215,371.08 |
-
-Sustainability score = `min(gold_kg × 10, 100)`
-
----
-
-## License
-
-Proprietary · Rebijoux UPDF
+_Ce README a été généré pour le projet AccessMap et remplace le contenu précédent._
+
+# AccessMap - Application de Cartographie Collaborative de l'Accessibilité Urbaine
+
+Bienvenue dans AccessMap, une application web et mobile collaborative dédiée à l'amélioration de l'accessibilité urbaine pour les personnes en situation de handicap.
+
+## Table des Matières
+1. [Stack Technique](#stack-technique)
+2. [Architecture Microservices](#architecture-microservices)
+3. [Modèle de Données Principal](#modèle-de-données-principal)
+4. [Lancement Local avec Docker Compose](#lancement-local-avec-docker-compose)
+5. [Accès aux APIs (Swagger)](#accès-aux-apis-swagger)
+6. [Contraintes et Bonnes Pratiques](#contraintes-et-bonnes-pratiques)
+
+## 1. Stack Technique
+
+L'application est développée en utilisant les technologies suivantes, toutes en versions gratuites/open-source :
+
+- **Back-end** : Java 17 + Spring Boot 3, API REST, architecture microservices
+- **Front-end web** : React + TypeScript
+- **Mobile** : PWA (Progressive Web App) depuis le front React
+- **Base de données** : PostgreSQL + extension PostGIS (données géospatiales)
+- **Cache** : Redis (Docker)
+- **Stockage photos** : Cloudinary (free tier) - *Note: L'intégration de Cloudinary sera gérée côté front-end ou via un service dédié si nécessaire.*
+- **Synthèse vocale** : Web Speech API native navigateur - *Côté front-end*
+- **Cartographie** : Leaflet.js + OpenStreetMap - *Côté front-end*
+- **Authentification** : Spring Security + JWT (access token 15min, refresh 7j)
+- **DevOps** : Docker Compose pour lancer tout l'environnement local
+- **Tests** : JUnit 5 (back), Jest (front), axe-core (accessibilité)
+
+## 2. Architecture Microservices
+
+Le back-end est structuré en microservices pour une meilleure modularité et scalabilité :
+
+- **auth-service** (Port 8080) : Gère l'inscription, la connexion JWT, et les rôles utilisateurs (CONTRIBUTOR / MODERATOR / ADMIN).
+- **user-service** (Port 8081) : Gère les profils utilisateurs, les préférences d'accessibilité et les statistiques.
+- **report-service** (Port 8082) : Gère le CRUD (Create, Read, Update, Delete) des signalements avec coordonnées GPS (PostGIS POINT), ainsi que le système de votes.
+- **map-service** (Port 8083) : Responsable de l'agrégation des données géospatiales, du clustering et des filtres pour l'affichage sur la carte.
+- **notification-service** (Port 8084) : Envoie des emails de confirmation (via JavaMailSender et Mailtrap pour le développement).
+
+## 3. Modèle de Données Principal
+
+Voici le modèle de données principal utilisé par les microservices :
+
+### Table `reports`
+- `id` UUID PK
+- `location` GEOGRAPHY(POINT, 4326) — PostGIS
+- `category` ENUM (STEP, RAMP, ELEVATOR, SIDEWALK, SIGNAGE, PARKING)
+- `description` TEXT nullable
+- `photo_url` VARCHAR nullable (Cloudinary)
+- `status` ENUM (PENDING, VALIDATED, REJECTED, RESOLVED)
+- `created_by` UUID FK users
+- `created_at` TIMESTAMP
+- `votes_up` INT DEFAULT 0
+- `votes_down` INT DEFAULT 0
+
+### Table `users`
+- `id` UUID PK
+- `email` VARCHAR UNIQUE
+- `password_hash` VARCHAR (BCrypt)
+- `role` ENUM
+- `display_name` VARCHAR
+- `accessibility_prefs` JSONB
+- `created_at` TIMESTAMP
+
+### Table `votes`
+- `id` UUID PK
+- `report_id` UUID FK
+- `user_id` UUID FK
+- `type` ENUM (UP / DOWN)
+- UNIQUE(`report_id`, `user_id`)
+
+## 4. Lancement Local avec Docker Compose
+
+Pour lancer l'ensemble de l'environnement (bases de données, Redis, et tous les microservices back-end) localement, suivez ces étapes :
+
+1.  **Prérequis** :
+    - Assurez-vous d'avoir Docker et Docker Compose installés sur votre machine.
+    - Java 17 et Maven doivent être installés pour compiler les microservices Spring Boot.
+
+2.  **Cloner le dépôt** :
+    ```bash
+    git clone https://github.com/denilzalopes/rebijoux-regold-dashboard.git accessmap-project
+    cd accessmap-project
+    ```
+
+3.  **Compiler les microservices Back-end** :
+    Chaque microservice Spring Boot doit être compilé pour générer le fichier `.jar` qui sera utilisé par Docker.
+    ```bash
+    cd backend-microservices/auth-service
+    mvn clean install
+    cd ../user-service
+    mvn clean install
+    cd ../report-service
+    mvn clean install
+    cd ../map-service
+    mvn clean install
+    cd ../notification-service
+    mvn clean install
+    cd ../..
+    ```
+
+4.  **Lancer l'environnement avec Docker Compose** :
+    ```bash
+    docker-compose up --build
+    ```
+    Cette commande va construire les images Docker pour chaque microservice (si elles n'existent pas ou si le Dockerfile a changé), créer les conteneurs PostgreSQL et Redis, et lancer tous les services.
+
+## 5. Accès aux APIs (Swagger)
+
+Chaque microservice expose sa documentation API via Swagger UI. Une fois les services lancés, vous pouvez y accéder aux adresses suivantes :
+
+- **auth-service** : `http://localhost:8080/swagger-ui.html`
+- **user-service** : `http://localhost:8081/swagger-ui.html`
+- **report-service** : `http://localhost:8082/swagger-ui.html`
+- **map-service** : `http://localhost:8083/swagger-ui.html`
+- **notification-service** : `http://localhost:8084/swagger-ui.html`
+
+## 6. Contraintes et Bonnes Pratiques
+
+- Tous les services utilisent des versions open-source et gratuites des technologies.
+- Le code est commenté en français.
+- Les variables d'environnement sensibles sont gérées via `.env` (ou directement dans `docker-compose.yml` pour les exemples locaux) et ne sont jamais codées en dur.
+- L'application front-end (React + PWA) sera développée ultérieurement et s'intégrera avec ces microservices.
+- L'approche mobile first, fonctionne aussi en desktop.
