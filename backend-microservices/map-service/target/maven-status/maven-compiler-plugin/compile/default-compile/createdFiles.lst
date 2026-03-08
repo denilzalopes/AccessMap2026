@@ -1,0 +1,7 @@
+com/accessmap/mapservice/config/WebClientConfig.class
+com/accessmap/mapservice/services/MapService.class
+com/accessmap/mapservice/dto/MapReportDto$MapReportDtoBuilder.class
+com/accessmap/mapservice/MapServiceApplication.class
+com/accessmap/mapservice/config/CorsConfig.class
+com/accessmap/mapservice/dto/MapReportDto.class
+com/accessmap/mapservice/controllers/MapController.class

@@ -1,0 +1,153 @@
+
+# ── AccessMap — Docker Compose (lancement local complet) ─────────────────────
+# Commande : docker-compose up --build
+# Prérequis : Docker + Docker Compose installés
+# Variables d'env : copier .env.example → .env et remplir les valeurs
+
+services:
+
+  # ── Base de données PostgreSQL avec PostGIS ──────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: accessmap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-accessmap}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: accessmap
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-accessmap}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Cache Redis ──────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.4-alpine
+    container_name: accessmap-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── auth-service (port 8080) ─────────────────────────────────────────────
+  auth-service:
+    build:
+      context: ./backend-microservices/auth-service
+      dockerfile: Dockerfile
+    container_name: accessmap-auth
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_auth
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      APP_JWT_EXPIRATION: ${JWT_EXPIRATION:-900000}
+      APP_JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── user-service (port 8081) ─────────────────────────────────────────────
+  user-service:
+    build:
+      context: ./backend-microservices/user-service
+      dockerfile: Dockerfile
+    container_name: accessmap-user
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_user
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── report-service (port 8082) ───────────────────────────────────────────
+  report-service:
+    build:
+      context: ./backend-microservices/report-service
+      dockerfile: Dockerfile
+    container_name: accessmap-report
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_report
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── map-service (port 8083) ──────────────────────────────────────────────
+  map-service:
+    build:
+      context: ./backend-microservices/map-service
+      dockerfile: Dockerfile
+    container_name: accessmap-map
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_map
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      REPORT_SERVICE_URL: http://report-service:8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── notification-service (port 8084) ────────────────────────────────────
+  notification-service:
+    build:
+      context: ./backend-microservices/notification-service
+      dockerfile: Dockerfile
+    container_name: accessmap-notification
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_notification
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      MAIL_HOST: ${MAIL_HOST:-smtp.mailtrap.io}
+      MAIL_PORT: ${MAIL_PORT:-2525}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    depends_on:
+      - redis
+
+  # ── frontend React PWA (port 3000) ───────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: accessmap-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+      - report-service
+      - map-service
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,12 @@
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/ReportServiceApplication.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/config/CorsConfig.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/controllers/ReportController.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/dto/ReportRequest.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/models/Category.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/models/Report.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/models/Status.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/models/Vote.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/models/VoteType.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/repositories/ReportRepository.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/repositories/VoteRepository.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/report-service/src/main/java/com/accessmap/reportservice/services/ReportService.java

@@ -1,0 +1,8 @@
+com/accessmap/userservice/models/Role.class
+com/accessmap/userservice/models/User.class
+com/accessmap/userservice/config/CorsConfig.class
+com/accessmap/userservice/controllers/UserController.class
+com/accessmap/userservice/services/UserService.class
+com/accessmap/userservice/dto/UpdateProfileRequest.class
+com/accessmap/userservice/UserServiceApplication.class
+com/accessmap/userservice/repositories/UserRepository.class

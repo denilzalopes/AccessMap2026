@@ -1,0 +1,5 @@
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/notification-service/src/main/java/com/accessmap/notificationservice/NotificationServiceApplication.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/notification-service/src/main/java/com/accessmap/notificationservice/config/CorsConfig.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/notification-service/src/main/java/com/accessmap/notificationservice/controllers/NotificationController.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/notification-service/src/main/java/com/accessmap/notificationservice/dto/EmailRequest.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/notification-service/src/main/java/com/accessmap/notificationservice/services/NotificationService.java

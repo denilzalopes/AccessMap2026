@@ -1,0 +1,6 @@
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/map-service/src/main/java/com/accessmap/mapservice/MapServiceApplication.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/map-service/src/main/java/com/accessmap/mapservice/config/CorsConfig.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/map-service/src/main/java/com/accessmap/mapservice/config/WebClientConfig.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/map-service/src/main/java/com/accessmap/mapservice/controllers/MapController.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/map-service/src/main/java/com/accessmap/mapservice/dto/MapReportDto.java
+/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/map-service/src/main/java/com/accessmap/mapservice/services/MapService.java
