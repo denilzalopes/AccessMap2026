@@ -1,24 +1,19 @@
-# Environnement — NE JAMAIS COMMITTER
+# Java build
+**/target/
+**/*.jar
+**/*.class
+
+# Node
+**/node_modules/
+**/dist/
+
+# Env
 .env
 .env.local
 
-# Java / Maven
-*/target/
-*.class *.jar *.war
-.mvn/wrapper/maven-wrapper.jar
-
-# IDE
-.idea/ .vscode/ *.iml *.ipr *.iws
-
-# Node.js
-frontend/node_modules/
-frontend/dist/
-
-# Docker
-postgres_data/ redis_data/
-
 # OS
-.DS_Store Thumbs.db
+.DS_Store
+Thumbs.db
 
-# Logs
-*.log logs/
+# Docker volumes
+**/data/

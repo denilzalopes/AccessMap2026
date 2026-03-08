@@ -2,21 +2,32 @@ package com.accessmap.authservice.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+<<<<<<< HEAD
+=======
+import io.jsonwebtoken.SignatureAlgorithm;
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+<<<<<<< HEAD
 import javax.crypto.SecretKey;
+=======
+import java.security.Key;
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+<<<<<<< HEAD
 /**
  * Utilitaire JWT — génération et validation des tokens d'accès et de rafraîchissement.
  * Utilise l'API JJWT 0.12.x avec SecretKey (remplace SignatureAlgorithm déprécié).
  */
+=======
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 @Component
 public class JwtUtil {
 
@@ -29,8 +40,11 @@ public class JwtUtil {
     @Value("${app.jwt.refresh-expiration}")
     private long REFRESH_EXPIRATION_TIME;
 
+<<<<<<< HEAD
     // ── Extraction des claims ────────────────────────────────────────────────
 
+=======
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -53,6 +67,7 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
+<<<<<<< HEAD
         // API 0.12.x : parser() + verifyWith() au lieu de parserBuilder() + setSigningKey()
         return Jwts.parser()
                 .verifyWith(getSignKey())
@@ -68,6 +83,21 @@ public class JwtUtil {
     }
 
     public boolean validateToken(String token) {
+=======
+        return Jwts
+                .parserBuilder()
+                .setSigningKey(getSignKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    private Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    public Boolean validateToken(String token) {
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
         try {
             return !isTokenExpired(token);
         } catch (Exception e) {
@@ -75,6 +105,7 @@ public class JwtUtil {
         }
     }
 
+<<<<<<< HEAD
     // ── Génération ───────────────────────────────────────────────────────────
 
     /**
@@ -85,6 +116,8 @@ public class JwtUtil {
      * @param role           rôle (CONTRIBUTOR, MODERATOR, ADMIN)
      * @param expirationTime durée en millisecondes
      */
+=======
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     public String generateToken(String userName, String userId, String role, long expirationTime) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
@@ -92,6 +125,7 @@ public class JwtUtil {
         return createToken(claims, userName, expirationTime);
     }
 
+<<<<<<< HEAD
     private String createToken(Map<String, Object> claims, String subject, long expirationTime) {
         // API 0.12.x : claims() au lieu de setClaims(), signWith(key) sans algorithme explicite
         return Jwts.builder()
@@ -104,12 +138,27 @@ public class JwtUtil {
     }
 
     private SecretKey getSignKey() {
+=======
+    private String createToken(Map<String, Object> claims, String userName, long expirationTime) {
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(userName)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
+    }
+
+    private Key getSignKey() {
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+<<<<<<< HEAD
     // ── Getters ──────────────────────────────────────────────────────────────
 
+=======
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     public long getExpiration() {
         return EXPIRATION_TIME;
     }

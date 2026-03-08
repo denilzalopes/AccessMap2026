@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 -- ═══════════════════════════════════════════════════════════════════════════
 --  AccessMap — Script d'initialisation PostgreSQL + PostGIS
 --  Exécuté automatiquement au démarrage du conteneur PostgreSQL
@@ -134,3 +135,28 @@ VALUES
     (gen_random_uuid(), ST_SetSRID(ST_MakePoint(2.3440, 48.8580), 4326), 'PARKING',  'Emplacement PMR occupé par un véhicule non autorisé', 'PENDING', '00000000-0000-0000-0000-000000000002', 3),
     (gen_random_uuid(), ST_SetSRID(ST_MakePoint(2.3580, 48.8640), 4326), 'SIDEWALK', 'Trottoir obstrué par des travaux sans déviatio', 'RESOLVED', '00000000-0000-0000-0000-000000000001', 12)
 ON CONFLICT DO NOTHING;
+=======
+CREATE DATABASE accessmap_auth;
+CREATE DATABASE accessmap_user;
+CREATE DATABASE accessmap_report;
+CREATE DATABASE accessmap_map;
+
+-- Connect to accessmap_auth and create extension if not exists
+\c accessmap_auth;
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Connect to accessmap_user and create extension if not exists
+\c accessmap_user;
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Connect to accessmap_report and create extension if not exists
+\c accessmap_report;
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Connect to accessmap_map and create extension if not exists
+\c accessmap_map;
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Initial data for auth-service (example user)
+-- This will be handled by the auth-service itself or a dedicated migration tool
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea

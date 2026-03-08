@@ -1,4 +1,5 @@
 package com.accessmap.reportservice.repositories;
+<<<<<<< HEAD
 import com.accessmap.reportservice.models.Report;
 import com.accessmap.reportservice.models.Category;
 import com.accessmap.reportservice.models.Status;
@@ -14,4 +15,12 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
     // Requête géospatiale : signalements dans un rayon (en mètres)
     @Query(value = "SELECT * FROM reports WHERE ST_DWithin(location::geography, ST_SetSRID(ST_MakePoint(:lon,:lat),4326)::geography, :radius)", nativeQuery = true)
     List<Report> findWithinRadius(@Param("lat") double lat, @Param("lon") double lon, @Param("radius") double radiusMeters);
+=======
+
+import com.accessmap.reportservice.models.Report;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.UUID;
+
+public interface ReportRepository extends JpaRepository<Report, UUID> {
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 }

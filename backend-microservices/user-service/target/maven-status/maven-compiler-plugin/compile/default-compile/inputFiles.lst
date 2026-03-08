@@ -1,8 +1,0 @@
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/UserServiceApplication.java
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/config/CorsConfig.java
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/controllers/UserController.java
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/dto/UpdateProfileRequest.java
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/models/Role.java
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/models/User.java
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/repositories/UserRepository.java
-/Users/macbook/Desktop/projets/app-accessmap/backend-microservices/user-service/src/main/java/com/accessmap/userservice/services/UserService.java

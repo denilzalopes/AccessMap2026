@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 # ── AccessMap — Docker Compose (lancement local complet) ─────────────────────
 # Commande : docker-compose up --build
@@ -15,10 +16,23 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-accessmap}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       POSTGRES_DB: accessmap
+=======
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: accessmap-postgres
+    environment:
+      POSTGRES_DB: accessmap_auth
+      POSTGRES_USER: accessmap
+      POSTGRES_PASSWORD: password
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+<<<<<<< HEAD
       - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-accessmap}"]
@@ -31,10 +45,18 @@ services:
     image: redis:7.4-alpine
     container_name: accessmap-redis
     restart: unless-stopped
+=======
+      - ./database/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: accessmap-redis
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+<<<<<<< HEAD
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -42,16 +64,24 @@ services:
       retries: 5
 
   # ── auth-service (port 8080) ─────────────────────────────────────────────
+=======
+
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
   auth-service:
     build:
       context: ./backend-microservices/auth-service
       dockerfile: Dockerfile
+<<<<<<< HEAD
     container_name: accessmap-auth
     restart: unless-stopped
+=======
+    container_name: auth-service
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     ports:
       - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_auth
+<<<<<<< HEAD
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       APP_JWT_SECRET: ${JWT_SECRET}
@@ -63,16 +93,32 @@ services:
         condition: service_healthy
 
   # ── user-service (port 8081) ─────────────────────────────────────────────
+=======
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+      APP_JWT_SECRET: YourSuperSecretKeyThatIsAtLeast256BitsLongAndShouldBeStoredInEnvironmentVariables
+      APP_JWT_EXPIRATION: 900000
+      APP_JWT_REFRESH_EXPIRATION: 604800000
+    depends_on:
+      - postgres
+      - redis
+
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
   user-service:
     build:
       context: ./backend-microservices/user-service
       dockerfile: Dockerfile
+<<<<<<< HEAD
     container_name: accessmap-user
     restart: unless-stopped
+=======
+    container_name: user-service
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     ports:
       - "8081:8081"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_user
+<<<<<<< HEAD
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     depends_on:
@@ -80,16 +126,28 @@ services:
         condition: service_healthy
 
   # ── report-service (port 8082) ───────────────────────────────────────────
+=======
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      - postgres
+
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
   report-service:
     build:
       context: ./backend-microservices/report-service
       dockerfile: Dockerfile
+<<<<<<< HEAD
     container_name: accessmap-report
     restart: unless-stopped
+=======
+    container_name: report-service
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     ports:
       - "8082:8082"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_report
+<<<<<<< HEAD
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     depends_on:
@@ -97,16 +155,28 @@ services:
         condition: service_healthy
 
   # ── map-service (port 8083) ──────────────────────────────────────────────
+=======
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      - postgres
+
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
   map-service:
     build:
       context: ./backend-microservices/map-service
       dockerfile: Dockerfile
+<<<<<<< HEAD
     container_name: accessmap-map
     restart: unless-stopped
+=======
+    container_name: map-service
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     ports:
       - "8083:8083"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/accessmap_map
+<<<<<<< HEAD
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-accessmap}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       REPORT_SERVICE_URL: http://report-service:8082
@@ -115,10 +185,18 @@ services:
         condition: service_healthy
 
   # ── notification-service (port 8084) ────────────────────────────────────
+=======
+      SPRING_DATASOURCE_USERNAME: accessmap
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      - postgres
+
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
   notification-service:
     build:
       context: ./backend-microservices/notification-service
       dockerfile: Dockerfile
+<<<<<<< HEAD
     container_name: accessmap-notification
     restart: unless-stopped
     ports:
@@ -148,6 +226,19 @@ services:
       - report-service
       - map-service
 
+=======
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_MAIL_HOST: smtp.mailtrap.io
+      SPRING_MAIL_PORT: 2525
+      SPRING_MAIL_USERNAME: your_mailtrap_username
+      SPRING_MAIL_PASSWORD: your_mailtrap_password
+    depends_on:
+      - redis
+
+>>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 volumes:
   postgres_data:
   redis_data:

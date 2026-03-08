@@ -1,5 +1,0 @@
-com/accessmap/notificationservice/controllers/NotificationController.class
-com/accessmap/notificationservice/services/NotificationService.class
-com/accessmap/notificationservice/dto/EmailRequest.class
-com/accessmap/notificationservice/NotificationServiceApplication.class
-com/accessmap/notificationservice/config/CorsConfig.class
