@@ -1,14 +1,9 @@
 package com.accessmap.userservice.services;
-<<<<<<< HEAD
 import com.accessmap.userservice.dto.UpdateProfileRequest;
-=======
-
->>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 import com.accessmap.userservice.models.User;
 import com.accessmap.userservice.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-<<<<<<< HEAD
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
@@ -28,37 +23,4 @@ public class UserService {
         return userRepository.save(user);
     }
     @Transactional public void deleteUser(UUID id) { userRepository.deleteById(id); }
-=======
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-@Service
-@RequiredArgsConstructor
-public class UserService {
-
-    private final UserRepository userRepository;
-
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
-
-    public Optional<User> getUserById(UUID id) {
-        return userRepository.findById(id);
-    }
-
-    public User updateUser(UUID id, User userDetails) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setDisplayName(userDetails.getDisplayName());
-        user.setAccessibilityPrefs(userDetails.getAccessibilityPrefs());
-        user.setPasswordHash(userDetails.getPasswordHash());
-        return userRepository.save(user);
-    }
-
-    public void deleteUser(UUID id) {
-        userRepository.deleteById(id);
-    }
->>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 }

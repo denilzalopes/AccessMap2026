@@ -1,6 +1,5 @@
 package com.accessmap.authservice.controllers;
 
-<<<<<<< HEAD
 import com.accessmap.authservice.dto.AuthResponse;
 import com.accessmap.authservice.dto.LoginRequest;
 import com.accessmap.authservice.dto.RefreshTokenRequest;
@@ -22,23 +21,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Tag(name = "Authentification", description = "Inscription, connexion et refresh token")
-=======
-import com.accessmap.authservice.services.AuthService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
-
-@RestController
-@RequestMapping("/api/auth")
-@RequiredArgsConstructor
->>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
 public class AuthController {
 
     private final AuthService authService;
 
-<<<<<<< HEAD
     /**
      * POST /api/auth/register
      * Inscription d'un nouvel utilisateur avec rôle CONTRIBUTOR par défaut.
@@ -73,23 +59,5 @@ public class AuthController {
     @Operation(summary = "Rafraîchir le token")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request.getRefreshToken()));
-=======
-    @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody RegisterRequest request) {
-        Map<String, String> tokens = authService.register(request.getEmail(), request.getPassword(), request.getDisplayName());
-        return ResponseEntity.ok(tokens);
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
-        Map<String, String> tokens = authService.login(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(tokens);
-    }
-
-    @PostMapping("/refresh")
-    public ResponseEntity<Map<String, String>> refreshToken(@RequestBody RefreshTokenRequest request) {
-        Map<String, String> tokens = authService.refreshToken(request.getRefreshToken());
-        return ResponseEntity.ok(tokens);
->>>>>>> 8dc75969daaaeb0db3191c2950f49b72f0e441ea
     }
 }
