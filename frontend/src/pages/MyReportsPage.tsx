@@ -58,7 +58,7 @@ export default function MyReportsPage() {
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      const res = await fetch(`${REPORT_API}/api/reports/${id}?userId=${userId}`, , {
+      const res = await fetch(`${REPORT_API}/api/reports/${id}?userId=${userId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
