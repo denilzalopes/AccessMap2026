@@ -1,128 +1,232 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
+import toast from 'react-hot-toast';
+
+const REPORT_API = import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082';
+const AUTH_API   = import.meta.env.VITE_AUTH_API_URL   || 'http://localhost:8080';
+
+const CAT_MAP: Record<string, { label: string; color: string }> = {
+  STEP:     { label: 'Marche',       color: '#F97316' },
+  RAMP:     { label: 'Rampe',        color: '#4B55E8' },
+  ELEVATOR: { label: 'Ascenseur',    color: '#22C55E' },
+  SIDEWALK: { label: 'Trottoir',     color: '#06B6D4' },
+  SIGNAGE:  { label: 'Signalétique', color: '#E879A0' },
+  PARKING:  { label: 'Parking',      color: '#9CA3AF' },
+};
 
 export default function ProfilePage() {
-  const { displayName, logout, prefs, updatePrefs } = useAuth();
-  const navigate = useNavigate();
-  const [textSize, setTextSize] = useState<'small' | 'medium' | 'large'>(prefs.textSize as any || 'medium');
+  const { displayName, userId, logout } = useAuth();
+  const [reports, setReports]       = useState<any[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [tab, setTab]               = useState<'stats'|'settings'>('stats');
+  const [joinDate]                  = useState(() => localStorage.getItem('joinDate') || new Date().toISOString().split('T')[0]);
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  // Changer mot de passe
+  const [oldPwd,  setOldPwd]  = useState('');
+  const [newPwd,  setNewPwd]  = useState('');
+  const [newPwd2, setNewPwd2] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [showPwdForm, setShowPwdForm] = useState(false);
 
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
-    <div onClick={() => onChange(!value)} style={{ width: 44, height: 26, borderRadius: 13, background: value ? '#6366F1' : '#E5E7EB', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-      <div style={{ position: 'absolute', top: 3, left: value ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'left 0.2s' }}/>
-    </div>
-  );
+  useEffect(() => {
+    if (!localStorage.getItem('joinDate')) {
+      localStorage.setItem('joinDate', new Date().toISOString().split('T')[0]);
+    }
+  }, []);
 
-  const tabs = [
-    { id: 'carte', label: 'Carte', path: '/', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg> },
-    { id: 'signalements', label: 'Signalements', path: '/my-reports', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> },
-    { id: 'communaute', label: 'Communauté', path: '/community', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-    { id: 'profil', label: 'Profil', path: '/profile', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-  ];
+  useEffect(() => {
+    if (!userId) { setLoading(false); return; }
+    const token = localStorage.getItem('accessToken');
+    fetch(`${REPORT_API}/api/reports/user/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { setReports(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [userId]);
 
-  const initials = (displayName || 'U').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+  const totalVotesUp   = reports.reduce((s, r) => s + (r.votesUp   || 0), 0);
+  const totalVotesDown = reports.reduce((s, r) => s + (r.votesDown || 0), 0);
+  const catCounts = reports.reduce((acc: Record<string,number>, r) => {
+    acc[r.category] = (acc[r.category] || 0) + 1; return acc;
+  }, {});
+  const topCats   = Object.entries(catCounts).sort((a,b) => b[1]-a[1]).slice(0,3);
+  const pending   = reports.filter(r => r.status === 'PENDING').length;
+  const validated = reports.filter(r => r.status === 'VALIDATED').length;
+
+  const handleChangePwd = async () => {
+    if (!newPwd || !oldPwd) { toast.error('Remplissez tous les champs'); return; }
+    if (newPwd !== newPwd2) { toast.error('Les mots de passe ne correspondent pas'); return; }
+    if (newPwd.length < 6)  { toast.error('Minimum 6 caractères'); return; }
+    setPwdLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${AUTH_API}/api/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd })
+      });
+      if (!res.ok) throw new Error('Mot de passe actuel incorrect');
+      toast.success('Mot de passe modifié ✅');
+      setOldPwd(''); setNewPwd(''); setNewPwd2(''); setShowPwdForm(false);
+    } catch (e: any) { toast.error(e.message); }
+    setPwdLoading(false);
+  };
+
+  const S = {
+    page:    { minHeight:'100dvh', background:'#07071A', fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif", paddingBottom:80 },
+    avatar:  { width:64, height:64, borderRadius:'50%', background:'linear-gradient(135deg,#4B55E8,#818CF8)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, fontWeight:700, color:'white', flexShrink:0 },
+    card:    { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:16, padding:16, marginBottom:12 },
+    tabBtn:  (on: boolean) => ({ flex:1, padding:'10px', border:'none', borderRadius:12, background: on ? '#4B55E8' : 'rgba(255,255,255,0.05)', color: on ? 'white' : 'rgba(240,242,255,0.4)', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }),
+    stat:    (c: string)   => ({ flex:1, background:`${c}11`, border:`1px solid ${c}33`, borderRadius:14, padding:'14px 12px', textAlign:'center' as const }),
+    statNum: (c: string)   => ({ fontSize:26, fontWeight:800, color:c }),
+    statLbl: { fontSize:11, color:'rgba(240,242,255,0.4)', marginTop:2 },
+    input:   { width:'100%', padding:'11px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', color:'#F0F2FF', fontSize:14, fontFamily:'inherit', outline:'none', marginBottom:10 },
+    settingRow: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:'1px solid rgba(255,255,255,0.05)' } as const,
+  };
 
   return (
-    <div style={{ maxWidth: 390, margin: '0 auto', minHeight: '100dvh', background: '#F8F9FA', fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex', flexDirection: 'column' }}>
-      {/* Header violet */}
-      <div style={{ background: '#6366F1', padding: '56px 20px 80px', position: 'relative' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#fff' }}>Mon profil</h1>
-          <button style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={1.8} strokeLinecap="round" width={18} height={18}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          </button>
-        </div>
-        {/* Avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: '#6366F1', boxShadow: '0 4px 16px rgba(0,0,0,0.15)', position: 'relative' }}>
-            {initials}
-            <div style={{ position: 'absolute', bottom: 2, right: 2, width: 16, height: 16, borderRadius: '50%', background: '#22C55E', border: '2px solid #6366F1' }}/>
-          </div>
+    <div style={S.page}>
+      {/* Header */}
+      <div style={{ padding:'52px 20px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <div style={S.avatar}>{displayName?.[0]?.toUpperCase() ?? 'U'}</div>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>{displayName || 'Utilisateur'}</div>
-            <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: '#fff', marginTop: 4 }}>Contributeur actif</div>
+            <p style={{ color:'#F0F2FF', fontSize:18, fontWeight:700, margin:0 }}>{displayName ?? 'Utilisateur'}</p>
+            <span style={{ background:'rgba(75,85,232,0.2)', color:'#818CF8', fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, display:'inline-block', marginTop:4 }}>
+              Contributeur
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Stats card */}
-      <div style={{ margin: '0 16px', marginTop: -36, background: '#fff', borderRadius: 20, padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-around', position: 'relative', zIndex: 10, marginBottom: 16 }}>
-        {[{ v: '24', l: 'SIGNALÉS', c: '#6366F1' }, { v: '156', l: 'VOTES', c: '#F97316' }, { v: '8', l: 'VALIDÉS', c: '#22C55E' }].map(s => (
-          <div key={s.l} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 26, fontWeight: 800, color: s.c }}>{s.v}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.5px' }}>{s.l}</div>
-          </div>
-        ))}
+      {/* Tabs */}
+      <div style={{ display:'flex', gap:8, padding:'16px 20px 4px' }}>
+        <button style={S.tabBtn(tab==='stats')}    onClick={() => setTab('stats')}>📊 Statistiques</button>
+        <button style={S.tabBtn(tab==='settings')} onClick={() => setTab('settings')}>⚙️ Paramètres</button>
       </div>
 
-      <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto', paddingBottom: 100 }}>
-        {/* Accessibilité */}
-        <div style={{ background: '#fff', borderRadius: 20, padding: '20px', marginBottom: 16 }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 800, color: '#111' }}>Accessibilité</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {[
-              { icon: '👁', label: 'Mode haute visibilité', key: 'highVisibility', value: prefs.highVisibility },
-              { icon: '🔊', label: 'Lecture vocale', key: 'voiceReading', value: prefs.voiceReading },
-            ].map(item => (
-              <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 18 }}>{item.icon}</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>{item.label}</span>
+      <div style={{ padding:'12px 20px' }}>
+
+        {/* ── STATS ──────────────────────────────────────────────────────── */}
+        {tab === 'stats' && (
+          loading ? (
+            <div style={{ textAlign:'center', padding:40, color:'rgba(240,242,255,0.3)', fontSize:14 }}>Chargement...</div>
+          ) : (
+            <>
+              {/* Date d'inscription */}
+              <div style={{ ...S.card, display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:'rgba(75,85,232,0.15)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#818CF8" strokeWidth={2}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 </div>
-                <Toggle value={item.value as boolean} onChange={v => updatePrefs({ [item.key]: v })}/>
+                <div>
+                  <p style={{ color:'rgba(240,242,255,0.35)', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', margin:0 }}>Membre depuis</p>
+                  <p style={{ color:'#F0F2FF', fontSize:14, fontWeight:600, margin:'2px 0 0' }}>
+                    {new Date(joinDate).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}
+                  </p>
+                </div>
               </div>
-            ))}
-            {/* Text size */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <span style={{ fontSize: 18 }}>🔤</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>Taille du texte</span>
+
+              {/* Compteurs */}
+              <div style={{ display:'flex', gap:10, marginBottom:12 }}>
+                <div style={S.stat('#4B55E8')}>
+                  <div style={S.statNum('#818CF8')}>{reports.length}</div>
+                  <div style={S.statLbl}>Signalements</div>
+                </div>
+                <div style={S.stat('#22C55E')}>
+                  <div style={S.statNum('#22C55E')}>{totalVotesUp}</div>
+                  <div style={S.statLbl}>Votes 👍</div>
+                </div>
+                <div style={S.stat('#EF4444')}>
+                  <div style={S.statNum('#EF4444')}>{totalVotesDown}</div>
+                  <div style={S.statLbl}>Votes 👎</div>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {(['small', 'medium', 'large'] as const).map(s => (
-                  <button key={s} onClick={() => { setTextSize(s); updatePrefs({ textSize: s }); }} style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: '2px solid', borderColor: textSize === s ? '#6366F1' : '#E5E7EB', background: textSize === s ? '#EEF2FF' : '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', color: textSize === s ? '#6366F1' : '#9CA3AF', cursor: 'pointer', transition: 'all 0.15s' }}>
-                    {s === 'small' ? 'Normal' : s === 'medium' ? 'Grand' : 'Très grand'}
-                  </button>
-                ))}
+
+              {/* Statuts */}
+              <div style={{ display:'flex', gap:10, marginBottom:12 }}>
+                <div style={S.stat('#F59E0B')}>
+                  <div style={S.statNum('#F59E0B')}>{pending}</div>
+                  <div style={S.statLbl}>En attente</div>
+                </div>
+                <div style={S.stat('#22C55E')}>
+                  <div style={S.statNum('#22C55E')}>{validated}</div>
+                  <div style={S.statLbl}>Validés</div>
+                </div>
+              </div>
+
+              {/* Top catégories */}
+              {topCats.length > 0 && (
+                <div style={S.card}>
+                  <p style={{ color:'rgba(240,242,255,0.4)', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'1.5px', marginBottom:14 }}>Top catégories</p>
+                  {topCats.map(([cat, count]) => {
+                    const c = CAT_MAP[cat] || { label: cat, color: '#4B55E8' };
+                    const pct = Math.round((count / reports.length) * 100);
+                    return (
+                      <div key={cat} style={{ marginBottom:12 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                          <span style={{ color:c.color, fontSize:13, fontWeight:600 }}>{c.label}</span>
+                          <span style={{ color:'rgba(240,242,255,0.4)', fontSize:12 }}>{count} ({pct}%)</span>
+                        </div>
+                        <div style={{ height:4, background:'rgba(255,255,255,0.07)', borderRadius:4, overflow:'hidden' }}>
+                          <div style={{ width:`${pct}%`, height:'100%', background:c.color, borderRadius:4 }}/>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {reports.length === 0 && (
+                <div style={{ textAlign:'center', padding:'20px 0', color:'rgba(240,242,255,0.3)', fontSize:14 }}>
+                  Créez votre premier signalement pour voir vos stats !
+                </div>
+              )}
+            </>
+          )
+        )}
+
+        {/* ── PARAMÈTRES ─────────────────────────────────────────────────── */}
+        {tab === 'settings' && (
+          <div style={S.card}>
+            {/* Changer mot de passe */}
+            <div style={S.settingRow}>
+              <div>
+                <p style={{ color:'#F0F2FF', fontSize:14, fontWeight:600, margin:0 }}>Mot de passe</p>
+                <p style={{ color:'rgba(240,242,255,0.4)', fontSize:12, margin:'2px 0 0' }}>Modifier votre mot de passe</p>
+              </div>
+              <button onClick={() => setShowPwdForm(!showPwdForm)} style={{ background:'rgba(75,85,232,0.15)', border:'1px solid rgba(75,85,232,0.3)', borderRadius:8, color:'#818CF8', fontSize:12, fontWeight:600, padding:'6px 12px', cursor:'pointer', fontFamily:'inherit' }}>
+                {showPwdForm ? 'Annuler' : 'Modifier'}
+              </button>
+            </div>
+
+            {showPwdForm && (
+              <div style={{ paddingTop:12 }}>
+                <input type="password" placeholder="Mot de passe actuel" value={oldPwd}  onChange={e => setOldPwd(e.target.value)}  style={S.input}/>
+                <input type="password" placeholder="Nouveau mot de passe" value={newPwd}  onChange={e => setNewPwd(e.target.value)}  style={S.input}/>
+                <input type="password" placeholder="Confirmer le nouveau" value={newPwd2} onChange={e => setNewPwd2(e.target.value)} style={{ ...S.input, marginBottom:14 }}/>
+                <button onClick={handleChangePwd} disabled={pwdLoading} style={{ width:'100%', padding:'12px', background:'#4B55E8', border:'none', borderRadius:10, color:'white', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', opacity: pwdLoading ? 0.6 : 1 }}>
+                  {pwdLoading ? 'Modification...' : 'Confirmer'}
+                </button>
+              </div>
+            )}
+
+            {/* Version */}
+            <div style={{ ...S.settingRow, borderBottom:'none' }}>
+              <div>
+                <p style={{ color:'#F0F2FF', fontSize:14, fontWeight:600, margin:0 }}>Version</p>
+                <p style={{ color:'rgba(240,242,255,0.4)', fontSize:12, margin:'2px 0 0' }}>AccessMap v1.0.0</p>
               </div>
             </div>
+
+            {/* Déconnexion */}
+            <div style={{ paddingTop:8 }}>
+              <button onClick={logout} style={{ width:'100%', padding:14, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:12, color:'#EF4444', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                Se déconnecter
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Compte */}
-        <div style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', marginBottom: 16 }}>
-          {[
-            { icon: '⚙️', label: 'Paramètres du compte' },
-            { icon: '🔔', label: 'Notifications' },
-            { icon: '🔒', label: 'Confidentialité' },
-            { icon: '❓', label: 'Aide et support' },
-          ].map((item, i, arr) => (
-            <button key={item.label} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'none', border: 'none', borderBottom: i < arr.length - 1 ? '1px solid #F3F4F6' : 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 18 }}>{item.icon}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>{item.label}</span>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth={2} strokeLinecap="round" width={16} height={16}><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          ))}
-        </div>
-
-        {/* Logout */}
-        <button onClick={handleLogout} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '2px solid #FEE2E2', background: '#FFF5F5', color: '#EF4444', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          Se déconnecter
-        </button>
-      </div>
-
-      {/* Bottom nav */}
-      <div style={{ display: 'flex', background: '#fff', borderTop: '1px solid #F3F4F6', padding: '8px 0 8px', position: 'sticky', bottom: 0, zIndex: 30 }}>
-        {tabs.map(tab => (
-          <button key={tab.id} onClick={() => navigate(tab.path)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 0', color: tab.id === 'profil' ? '#6366F1' : '#9CA3AF', fontFamily: 'inherit' }}>
-            {tab.icon}
-            <span style={{ fontSize: 10, fontWeight: 600 }}>{tab.label}</span>
-          </button>
-        ))}
+        )}
       </div>
     </div>
   );

@@ -1,151 +1,95 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import toast from 'react-hot-toast';
 
-const API = 'http://localhost:8080/api/auth';
+const API_URL = import.meta.env.VITE_AUTH_API_URL || 
+'http://localhost:8080';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ email: '', password: '', displayName: '' });
-
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const [showPwd, setShowPwd] = useState(false);
 
   const handleLogin = async () => {
+    if (!email || !password) { toast.error('Remplissez tous les champs'); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API}/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password }),
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
-      if (!res.ok) throw new Error((await res.json()).message || 'Erreur connexion');
-      login(await res.json());
+      if (!res.ok) throw new Error('Email ou mot de passe incorrect');
+      const data = await res.json();
+      login(data);
+      toast.success(`Bienvenue ${data.displayName} 👋`);
       navigate('/');
     } catch (e: any) { toast.error(e.message); }
     setLoading(false);
   };
 
-  const handleRegister = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/register`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password, displayName: form.displayName }),
-      });
-      if (!res.ok) throw new Error((await res.json()).message || 'Erreur inscription');
-      login(await res.json());
-      navigate('/onboarding');
-    } catch (e: any) { toast.error(e.message); }
-    setLoading(false);
-  };
+  const inp = { width:'100%', padding:'14px 16px', borderRadius:14, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', color:'#F0F2FF', fontSize:15, fontFamily:'inherit', outline:'none' };
 
   return (
-    <div style={{
-      minHeight: '100dvh', background: '#fff',
-      fontFamily: "'DM Sans', system-ui, sans-serif",
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', padding: '24px',
-    }}>
+    <div style={{ minHeight:'100dvh', background:'#07071A', fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif", display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'32px 24px' }}>
+
       {/* Logo */}
-      <div style={{ marginBottom: 40, textAlign: 'center' }}>
-        <div style={{
-          width: 64, height: 64, background: '#6366F1', borderRadius: 20,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 16px',
-          boxShadow: '0 8px 24px rgba(99,102,241,0.35)',
-        }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" width={32} height={32}>
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-            <circle cx="12" cy="10" r="3"/>
+      <div style={{ marginBottom:32, display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
+        <div style={{ width:72, height:72, borderRadius:22, background:'linear-gradient(135deg,#4B55E8,#6366F1)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 60px rgba(75,85,232,0.4)' }}>
+          <svg viewBox="0 0 40 48" width="38" height="38" fill="none">
+            <path d="M20 2C12.27 2 6 8.27 6 16c0 10.5 14 30 14 30s14-19.5 14-30C34 8.27 27.73 2 20 2z" fill="white" opacity=".95"/>
+            <circle cx="20" cy="14" r="2.5" fill="#4B55E8"/>
+            <line x1="14" y1="19" x2="26" y2="19" stroke="#4B55E8" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="17" y1="19" x2="17" y2="26" stroke="#4B55E8" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="23" y1="19" x2="23" y2="26" stroke="#4B55E8" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </div>
-        <div style={{ fontSize: 26, fontWeight: 800, color: '#111', letterSpacing: '-0.5px' }}>AccessMap</div>
-        <div style={{ fontSize: 14, color: '#9CA3AF', marginTop: 4 }}>Rendons la ville accessible à tous</div>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontSize:32, fontWeight:800, color:'#F0F2FF', letterSpacing:'-1px' }}>Access<span style={{ color:'#818CF8' }}>Map</span></div>
+          <div style={{ fontSize:14, color:'rgba(240,242,255,0.4)', marginTop:4 }}>Cartographie collaborative de l'accessibilité</div>
+        </div>
       </div>
 
-      {/* Card */}
-      <div style={{ width: '100%', maxWidth: 400 }}>
-        {/* Tabs */}
-        <div style={{
-          display: 'flex', background: '#F3F4F6', borderRadius: 14, padding: 4, marginBottom: 28,
-        }}>
-          {(['login', 'register'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              flex: 1, padding: '10px 0', borderRadius: 11, border: 'none',
-              cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
-              background: tab === t ? '#fff' : 'transparent',
-              color: tab === t ? '#111' : '#9CA3AF',
-              boxShadow: tab === t ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
-              transition: 'all 0.2s',
-            }}>
-              {t === 'login' ? 'Connexion' : 'Inscription'}
+      {/* Form */}
+      <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:12 }}>
+        <div>
+          <label style={{ fontSize:11, fontWeight:700, color:'rgba(240,242,255,0.35)', textTransform:'uppercase', letterSpacing:'1.5px', display:'block', marginBottom:7 }}>Email</label>
+          <input type="email" placeholder="votre@email.com" value={email} onChange={e => setEmail(e.target.value)} style={inp}
+            onFocus={e => e.target.style.borderColor='#4B55E8'} onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}/>
+        </div>
+        <div>
+          <label style={{ fontSize:11, fontWeight:700, color:'rgba(240,242,255,0.35)', textTransform:'uppercase', letterSpacing:'1.5px', display:'block', marginBottom:7 }}>Mot de passe</label>
+          <div style={{ position:'relative' }}>
+            <input type={showPwd ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              style={{ ...inp, paddingRight:48 }}
+              onFocus={e => e.target.style.borderColor='#4B55E8'} onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}/>
+            <button onClick={() => setShowPwd(!showPwd)} style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(240,242,255,0.3)', padding:0 }}>
+              {showPwd
+                ? <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" width={18} height={18}><path d="M17 7l-7 7-7-7"/></svg>
+                : <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" width={18} height={18}><circle cx="10" cy="10" r="3"/><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z"/></svg>
+              }
             </button>
-          ))}
+          </div>
         </div>
 
-        {/* Fields */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {tab === 'register' && (
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
-                Nom d'affichage
-              </label>
-              <input
-                placeholder="Ex: Marie Dupont"
-                value={form.displayName}
-                onChange={e => set('displayName', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          )}
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
-              Adresse email
-            </label>
-            <input
-              type="email" placeholder="vous@exemple.com"
-              value={form.email} onChange={e => set('email', e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
-              Mot de passe
-            </label>
-            <input
-              type="password" placeholder="••••••••"
-              value={form.password} onChange={e => set('password', e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (tab === 'login' ? handleLogin() : handleRegister())}
-              style={inputStyle}
-            />
-          </div>
+        <button onClick={handleLogin} disabled={loading} style={{ marginTop:8, width:'100%', padding:15, borderRadius:14, border:'none', background: loading ? '#353575' : '#4B55E8', color:'white', fontSize:15, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8, boxShadow:'0 4px 20px rgba(75,85,232,0.35)', transition:'all 0.2s' }}>
+          {loading ? <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/> Connexion...</> : 'Se connecter'}
+        </button>
 
-          <button
-            onClick={tab === 'login' ? handleLogin : handleRegister}
-            disabled={loading}
-            style={{
-              marginTop: 8, padding: '14px', borderRadius: 14, border: 'none',
-              background: '#6366F1', color: '#fff', fontSize: 15, fontWeight: 700,
-              fontFamily: 'inherit', cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
-              transition: 'all 0.15s',
-            }}
-          >
-            {loading ? 'Chargement...' : tab === 'login' ? 'Se connecter' : "S'inscrire"}
+        <div style={{ textAlign:'center', fontSize:14, color:'rgba(240,242,255,0.4)', marginTop:4 }}>
+          Pas encore de compte ?{' '}
+          <button onClick={() => navigate('/register')} style={{ background:'none', border:'none', color:'#818CF8', fontWeight:700, cursor:'pointer', fontSize:14, fontFamily:'inherit' }}>
+            Créer un compte
           </button>
         </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '12px 14px', borderRadius: 12,
-  border: '1.5px solid #E5E7EB', fontSize: 15, fontFamily: 'inherit',
-  outline: 'none', color: '#111', background: '#F9FAFB',
-  boxSizing: 'border-box', transition: 'border-color 0.15s',
-};

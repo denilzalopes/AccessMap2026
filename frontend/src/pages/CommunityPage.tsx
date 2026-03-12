@@ -1,121 +1,102 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../App';
 
-const API = 'http://localhost:8082/api/reports';
+const REPORT_API = import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082';
 
-const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING:   { label: 'En attente', color: '#F97316', bg: '#FFF7ED' },
-  VALIDATED: { label: 'Validé',     color: '#22C55E', bg: '#F0FDF4' },
-  REJECTED:  { label: 'Rejeté',     color: '#EF4444', bg: '#FFF5F5' },
-  RESOLVED:  { label: 'Résolu',     color: '#6366F1', bg: '#EEF2FF' },
-};
-
-const CAT_ICON: Record<string, string> = {
-  STEP: '🚶', RAMP: '♿', ELEVATOR: '🛗', SIDEWALK: '🛤️', SIGNAGE: 'ℹ️', PARKING: '🅿️',
+const CAT_MAP: Record<string, { label: string; color: string; icon: string }> = {
+  STEP:     { label: 'Marche',       color: '#F97316', icon: '🪜' },
+  RAMP:     { label: 'Rampe',        color: '#4B55E8', icon: '↗️' },
+  ELEVATOR: { label: 'Ascenseur',    color: '#22C55E', icon: '🛗' },
+  SIDEWALK: { label: 'Trottoir',     color: '#06B6D4', icon: '🚶' },
+  SIGNAGE:  { label: 'Signalétique', color: '#E879A0', icon: '⚠️' },
+  PARKING:  { label: 'Parking',      color: '#9CA3AF', icon: '🅿️' },
 };
 
 export default function CommunityPage() {
-  const { isAuthenticated, userId } = useAuth();
-  const navigate = useNavigate();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [voted, setVoted] = useState<Record<string, 'up' | 'down'>>({});
+  const [filter, setFilter] = useState('ALL');
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    fetch(`${API}?page=0&size=20`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : d.content || []))
-      .catch(() => setReports([])).finally(() => setLoading(false));
+    fetch(`${REPORT_API}/api/reports`)
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(data => { setReports(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  const vote = async (id: string, type: 'up' | 'down') => {
-    if (!isAuthenticated) { navigate('/login'); return; }
-    const token = localStorage.getItem('accessToken');
-    try {
-      await fetch(`${API}/${id}/vote?userId=${userId}&type=${type}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      setVoted(v => ({ ...v, [id]: type }));
-      setReports(rs => rs.map(r => r.id === id ? { ...r, votesUp: r.votesUp + (type === 'up' ? 1 : 0), votesDown: r.votesDown + (type === 'down' ? 1 : 0) } : r));
-    } catch {}
-  };
-
-  const tabs = [
-    { id: 'carte', label: 'Carte', path: '/', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg> },
-    { id: 'signalements', label: 'Signalements', path: '/my-reports', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> },
-    { id: 'communaute', label: 'Communauté', path: '/community', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-    { id: 'profil', label: 'Profil', path: '/profile', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-  ];
+  const filtered = filter === 'ALL' ? reports : reports.filter(r => r.category === filter);
+  const sorted = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div style={{ maxWidth: 390, margin: '0 auto', minHeight: '100dvh', background: '#F8F9FA', fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: '#fff', padding: '56px 20px 16px', borderBottom: '1px solid #F3F4F6' }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#111', letterSpacing: '-0.5px' }}>Communauté</h1>
-        <p style={{ margin: '4px 0 0', fontSize: 14, color: '#9CA3AF' }}>Validez les signalements de vos voisins</p>
+    <div style={{ minHeight: '100dvh', background: '#07071A', fontFamily: "\'Plus Jakarta Sans\',system-ui,sans-serif", paddingBottom: 80 }}>
+      <div style={{ padding: '52px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <h1 style={{ color: '#F0F2FF', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>Communauté</h1>
+        <p style={{ color: 'rgba(240,242,255,0.35)', fontSize: 13, margin: 0 }}>{reports.length} signalement{reports.length !== 1 ? 's' : ''} partagé{reports.length !== 1 ? 's' : ''}</p>
       </div>
 
-      <div style={{ flex: 1, padding: '16px', overflowY: 'auto', paddingBottom: 90 }}>
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[1,2,3].map(i => <div key={i} style={{ background: '#fff', borderRadius: 16, height: 160 }}/>)}
-          </div>
-        ) : reports.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🏙️</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#374151' }}>Aucun signalement pour le moment</div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {reports.map(r => {
-              const st = STATUS_LABEL[r.status] || STATUS_LABEL.PENDING;
-              const myVote = voted[r.id];
-              return (
-                <div key={r.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-                  {r.photoUrl && <img src={r.photoUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover' }}/>}
-                  <div style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: '#EEF2FF', color: '#6366F1' }}>
-                          {CAT_ICON[r.category]} {r.category}
-                        </span>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: st.bg, color: st.color }}>
-                          {st.label}
-                        </span>
-                      </div>
-                    </div>
-                    <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 800, color: '#111' }}>
-                      {r.description?.slice(0, 50) || `Obstacle ${r.category}`}
-                    </h3>
-                    <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#9CA3AF', marginBottom: 12 }}>
-                      <span>📍 {r.latitude?.toFixed(3)}, {r.longitude?.toFixed(3)}</span>
-                      <span>🕐 {new Date(r.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                    </div>
-                    <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600 }}>Ce signalement est-il correct ?</span>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => vote(r.id, 'up')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 20, border: '1.5px solid', borderColor: myVote === 'up' ? '#6366F1' : '#E5E7EB', background: myVote === 'up' ? '#EEF2FF' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: myVote === 'up' ? '#6366F1' : '#6B7280', fontFamily: 'inherit' }}>
-                          👍 {r.votesUp}
-                        </button>
-                        <button onClick={() => vote(r.id, 'down')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 20, border: '1.5px solid', borderColor: myVote === 'down' ? '#EF4444' : '#E5E7EB', background: myVote === 'down' ? '#FFF5F5' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: myVote === 'down' ? '#EF4444' : '#6B7280', fontFamily: 'inherit' }}>
-                          👎 {r.votesDown}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', background: '#fff', borderTop: '1px solid #F3F4F6', padding: '8px 0 8px', position: 'sticky', bottom: 0, zIndex: 30 }}>
-        {tabs.map(tab => (
-          <button key={tab.id} onClick={() => navigate(tab.path)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 0', color: tab.id === 'communaute' ? '#6366F1' : '#9CA3AF', fontFamily: 'inherit' }}>
-            {tab.icon}
-            <span style={{ fontSize: 10, fontWeight: 600 }}>{tab.label}</span>
+      {/* Filtres */}
+      <div style={{ display: 'flex', gap: 8, padding: '12px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {[{ id: 'ALL', label: 'Tous', color: '#4B55E8' }, ...Object.entries(CAT_MAP).map(([id, v]) => ({ id, label: v.label, color: v.color }))].map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', background: filter === f.id ? f.color : 'rgba(255,255,255,0.06)', color: filter === f.id ? 'white' : 'rgba(240,242,255,0.4)', transition: 'all 0.15s' }}>
+            {f.label}
           </button>
         ))}
       </div>
+
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+          <div style={{ color: 'rgba(240,242,255,0.4)', fontSize: 14 }}>Chargement...</div>
+        </div>
+      )}
+
+      {!loading && sorted.length === 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: 12 }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(75,85,232,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" stroke="#4B55E8" strokeWidth="2" strokeLinecap="round"/></svg>
+          </div>
+          <p style={{ color: 'rgba(240,242,255,0.5)', fontSize: 15, textAlign: 'center', margin: 0 }}>Aucun signalement pour cette catégorie</p>
+        </div>
+      )}
+
+      {!loading && sorted.length > 0 && (
+        <div style={{ padding: '8px 20px' }}>
+          {sorted.map((r: any) => {
+            const cat = CAT_MAP[r.category] || { label: r.category, color: '#4B55E8', icon: '📍' };
+            const ago = (() => {
+              const diff = Date.now() - new Date(r.createdAt).getTime();
+              const h = Math.floor(diff / 3600000);
+              const d = Math.floor(h / 24);
+              if (d > 0) return `il y a ${d}j`;
+              if (h > 0) return `il y a ${h}h`;
+              return 'à l\u2019instant';
+            })();
+            return (
+              <div key={r.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ background: cat.color + '22', color: cat.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: `1px solid ${cat.color}44` }}>
+                    {cat.label}
+                  </span>
+                  <span style={{ color: 'rgba(240,242,255,0.25)', fontSize: 11 }}>{ago}</span>
+                </div>
+                {r.description && (
+                  <p style={{ color: '#F0F2FF', fontSize: 14, margin: '0 0 10px', lineHeight: 1.5 }}>{r.description}</p>
+                )}
+                {r.photoUrl && (
+                  <img src={r.photoUrl} alt="Photo" style={{ width: '100%', borderRadius: 10, marginBottom: 10, objectFit: 'cover', maxHeight: 180 }} />
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11 }}>
+                    📍 {r.latitude?.toFixed(4)}, {r.longitude?.toFixed(4)}
+                  </span>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <span style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11 }}>👍 {r.votesUp || 0}</span>
+                    <span style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11 }}>👎 {r.votesDown || 0}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

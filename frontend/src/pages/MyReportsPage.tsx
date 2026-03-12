@@ -1,116 +1,234 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
+import toast from 'react-hot-toast';
 
-const API = 'http://localhost:8082/api/reports';
+const REPORT_API = import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082';
 
-const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING:   { label: 'En attente', color: '#F97316', bg: '#FFF7ED' },
-  VALIDATED: { label: 'Validé',     color: '#22C55E', bg: '#F0FDF4' },
-  REJECTED:  { label: 'Rejeté',     color: '#EF4444', bg: '#FFF5F5' },
-  RESOLVED:  { label: 'Résolu',     color: '#6366F1', bg: '#EEF2FF' },
+const CAT_MAP: Record<string, { label: string; color: string }> = {
+  STEP:     { label: 'Marche',       color: '#F97316' },
+  RAMP:     { label: 'Rampe',        color: '#4B55E8' },
+  ELEVATOR: { label: 'Ascenseur',    color: '#22C55E' },
+  SIDEWALK: { label: 'Trottoir',     color: '#06B6D4' },
+  SIGNAGE:  { label: 'Signalétique', color: '#E879A0' },
+  PARKING:  { label: 'Parking',      color: '#9CA3AF' },
 };
 
-const CAT_ICON: Record<string, string> = {
-  STEP: '🚶', RAMP: '♿', ELEVATOR: '🛗', SIDEWALK: '🛤️', SIGNAGE: 'ℹ️', PARKING: '🅿️',
+const CATEGORIES = Object.entries(CAT_MAP).map(([id, v]) => ({ id, label: v.label }));
+
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  PENDING:   { label: 'En attente', color: '#F59E0B' },
+  VALIDATED: { label: 'Validé',     color: '#22C55E' },
+  REJECTED:  { label: 'Rejeté',     color: '#EF4444' },
 };
+
+interface EditState {
+  id: string;
+  category: string;
+  description: string;
+  photoUrl: string;
+}
 
 export default function MyReportsPage() {
-  const { isAuthenticated, userId } = useAuth();
-  const navigate = useNavigate();
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { userId } = useAuth();
+  const navigate   = useNavigate();
+  const [reports, setReports]       = useState<any[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editState, setEditState]   = useState<EditState | null>(null);
+  const [saving, setSaving]         = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const token = localStorage.getItem('accessToken');
-    fetch(`${API}/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(setReports).catch(() => setReports([])).finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  const token = localStorage.getItem('accessToken');
 
-  const tabs = [
-    { id: 'carte', label: 'Carte', path: '/', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg> },
-    { id: 'signalements', label: 'Signalements', path: '/my-reports', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> },
-    { id: 'communaute', label: 'Communauté', path: '/community', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-    { id: 'profil', label: 'Profil', path: '/profile', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" width={22} height={22}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-  ];
+  const fetchReports = () => {
+    if (!userId) { setLoading(false); return; }
+    fetch(`${REPORT_API}/api/reports/user/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { setReports(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => { setLoading(false); });
+  };
+
+  useEffect(() => { fetchReports(); }, [userId]);
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`${REPORT_API}/api/reports/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok && res.status !== 204) throw new Error();
+      setReports(prev => prev.filter(r => r.id !== id));
+      toast.success('Signalement supprimé');
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
+    setDeletingId(null);
+    setConfirmDeleteId(null);
+  };
+
+  const handleSave = async () => {
+    if (!editState) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${REPORT_API}/api/reports/${editState.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          category:    editState.category,
+          description: editState.description,
+          photoUrl:    editState.photoUrl,
+          latitude:    reports.find(r => r.id === editState.id)?.latitude,
+          longitude:   reports.find(r => r.id === editState.id)?.longitude,
+          createdBy:   userId,
+        })
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setReports(prev => prev.map(r => r.id === editState.id ? updated : r));
+      toast.success('Signalement modifié ✅');
+      setEditState(null);
+    } catch {
+      toast.error('Erreur lors de la modification');
+    }
+    setSaving(false);
+  };
+
+  const S = {
+    page:    { minHeight: '100dvh', background: '#07071A', fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif", paddingBottom: 80 },
+    header:  { padding: '52px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' },
+    h1:      { color: '#F0F2FF', fontSize: 22, fontWeight: 700, margin: 0 },
+    count:   { color: 'rgba(240,242,255,0.35)', fontSize: 13, marginTop: 4 },
+    card:    { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, marginBottom: 12 },
+    input:   { width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#F0F2FF', fontSize: 14, fontFamily: 'inherit', outline: 'none', marginBottom: 10 } as React.CSSProperties,
+    select:  { width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: '#0F1030', color: '#F0F2FF', fontSize: 14, fontFamily: 'inherit', outline: 'none', marginBottom: 10 } as React.CSSProperties,
+    btnEdit: { flex: 1, padding: '8px', border: '1px solid rgba(75,85,232,0.4)', borderRadius: 10, background: 'rgba(75,85,232,0.1)', color: '#818CF8', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+    btnDel:  { flex: 1, padding: '8px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, background: 'rgba(239,68,68,0.08)', color: '#EF4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  };
 
   return (
-    <div style={{ maxWidth: 390, margin: '0 auto', minHeight: '100dvh', background: '#F8F9FA', fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{ background: '#fff', padding: '56px 20px 16px', borderBottom: '1px solid #F3F4F6' }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#111', letterSpacing: '-0.5px' }}>Mes signalements</h1>
-        <p style={{ margin: '4px 0 0', fontSize: 14, color: '#9CA3AF' }}>
-          {loading ? 'Chargement...' : `${reports.length} signalement${reports.length !== 1 ? 's' : ''}`}
-        </p>
+    <div style={S.page}>
+      <div style={S.header}>
+        <h1 style={S.h1}>Mes signalements</h1>
+        {!loading && <p style={S.count}>{reports.length} signalement{reports.length !== 1 ? 's' : ''}</p>}
       </div>
 
-      {/* List */}
-      <div style={{ flex: 1, padding: '16px', overflowY: 'auto', paddingBottom: 80 }}>
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} style={{ background: '#fff', borderRadius: 16, height: 100, animation: 'pulse 1.5s infinite' }}/>
-            ))}
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+          <div style={{ width: 36, height: 36, border: '3px solid rgba(75,85,232,0.2)', borderTopColor: '#4B55E8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      )}
+
+      {!loading && reports.length === 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: 16 }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(75,85,232,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="#4B55E8" strokeWidth="2" strokeLinecap="round"/></svg>
           </div>
-        ) : reports.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#374151', marginBottom: 8 }}>Aucun signalement</div>
-            <div style={{ fontSize: 14, color: '#9CA3AF', marginBottom: 24 }}>Signalez votre premier obstacle urbain !</div>
-            <button onClick={() => navigate('/report')} style={{ padding: '12px 24px', background: '#6366F1', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}>
-              Signaler un obstacle
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {reports.map(r => {
-              const st = STATUS_LABEL[r.status] || STATUS_LABEL.PENDING;
+          <p style={{ color: 'rgba(240,242,255,0.5)', fontSize: 15, textAlign: 'center', margin: 0 }}>Aucun signalement pour l'instant</p>
+          <button onClick={() => navigate('/report/new')} style={{ padding: '12px 24px', background: '#4B55E8', border: 'none', borderRadius: 12, color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Créer un signalement
+          </button>
+        </div>
+      )}
+
+      {!loading && reports.length > 0 && (
+        <div style={{ padding: '16px 20px' }}>
+          {[...reports]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .map((r: any) => {
+              const cat    = CAT_MAP[r.category] || { label: r.category, color: '#4B55E8' };
+              const status = STATUS_MAP[r.status] || { label: r.status, color: '#9CA3AF' };
+              const isEditing = editState?.id === r.id;
+
               return (
-                <div key={r.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-                  {r.photoUrl && <img src={r.photoUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover' }}/>}
-                  <div style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 18 }}>{CAT_ICON[r.category] || '📍'}</span>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{r.category}</div>
-                          <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                            {new Date(r.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <div key={r.id} style={S.card}>
+                  {/* En-tête carte */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ background: cat.color + '22', color: cat.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: `1px solid ${cat.color}44` }}>
+                      {cat.label}
+                    </span>
+                    <span style={{ color: status.color, fontSize: 11, fontWeight: 600 }}>{status.label}</span>
+                  </div>
+
+                  {/* Mode édition */}
+                  {isEditing ? (
+                    <div>
+                      <select
+                        value={editState.category}
+                        onChange={e => setEditState({ ...editState, category: e.target.value })}
+                        style={S.select}
+                      >
+                        {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                      <textarea
+                        value={editState.description}
+                        onChange={e => setEditState({ ...editState, description: e.target.value })}
+                        placeholder="Description..."
+                        rows={3}
+                        style={{ ...S.input, resize: 'none' } as React.CSSProperties}
+                      />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        <button onClick={() => setEditState(null)} style={{ ...S.btnDel, flex: 1 }}>Annuler</button>
+                        <button onClick={handleSave} disabled={saving} style={{ ...S.btnEdit, flex: 2, opacity: saving ? 0.6 : 1 }}>
+                          {saving ? 'Enregistrement...' : '✅ Sauvegarder'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {r.description && (
+                        <p style={{ color: '#F0F2FF', fontSize: 14, margin: '0 0 10px', lineHeight: 1.5 }}>{r.description}</p>
+                      )}
+                      {r.photoUrl && (
+                        <img src={r.photoUrl} alt="Photo" style={{ width: '100%', borderRadius: 10, marginBottom: 10, objectFit: 'cover', maxHeight: 160 }} />
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <span style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11 }}>
+                          {r.latitude?.toFixed(4)}, {r.longitude?.toFixed(4)}
+                        </span>
+                        <span style={{ color: 'rgba(240,242,255,0.25)', fontSize: 11 }}>
+                          {new Date(r.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+
+                      {/* Boutons action */}
+                      {confirmDeleteId === r.id ? (
+                        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                          <p style={{ color: '#F0F2FF', fontSize: 13, marginBottom: 10 }}>Confirmer la suppression ?</p>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => setConfirmDeleteId(null)} style={{ ...S.btnEdit, flex: 1 }}>Non</button>
+                            <button
+                              onClick={() => handleDelete(r.id)}
+                              disabled={deletingId === r.id}
+                              style={{ ...S.btnDel, flex: 1, opacity: deletingId === r.id ? 0.6 : 1 }}
+                            >
+                              {deletingId === r.id ? '...' : 'Oui, supprimer'}
+                            </button>
                           </div>
                         </div>
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: st.bg, color: st.color }}>
-                        {st.label}
-                      </span>
-                    </div>
-                    {r.description && <p style={{ margin: '0 0 10px', fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>{r.description}</p>}
-                    <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#9CA3AF', fontWeight: 600 }}>
-                      <span>👍 {r.votesUp}</span>
-                      <span>👎 {r.votesDown}</span>
-                    </div>
-                  </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => setEditState({ id: r.id, category: r.category, description: r.description || '', photoUrl: r.photoUrl || '' })}
+                            style={S.btnEdit}
+                          >
+                            ✏️ Modifier
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(r.id)} style={S.btnDel}>
+                            🗑️ Supprimer
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               );
             })}
-          </div>
-        )}
-      </div>
-
-      {/* FAB */}
-      <button onClick={() => navigate('/report')} style={{ position: 'fixed', bottom: 76, right: 20, width: 56, height: 56, borderRadius: '50%', background: '#6366F1', border: 'none', boxShadow: '0 4px 20px rgba(99,102,241,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30 }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" width={26} height={26}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
-
-      {/* Bottom nav */}
-      <div style={{ display: 'flex', background: '#fff', borderTop: '1px solid #F3F4F6', padding: '8px 0 8px', position: 'sticky', bottom: 0, zIndex: 30 }}>
-        {tabs.map(tab => (
-          <button key={tab.id} onClick={() => navigate(tab.path)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 0', color: tab.id === 'signalements' ? '#6366F1' : '#9CA3AF', fontFamily: 'inherit' }}>
-            {tab.icon}
-            <span style={{ fontSize: 10, fontWeight: 600 }}>{tab.label}</span>
-          </button>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

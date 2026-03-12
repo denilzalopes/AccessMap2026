@@ -76,6 +76,15 @@ public class ReportService {
     }
 
     @Transactional
+    public Report updateReport(UUID id, ReportRequest request) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+        report.setCategory(com.accessmap.reportservice.models.Category.valueOf(request.getCategory()));
+        report.setDescription(request.getDescription());
+        if (request.getPhotoUrl() != null) report.setPhotoUrl(request.getPhotoUrl());
+        return reportRepository.save(report);
+    }
+
     public void deleteReport(UUID id) {
         reportRepository.deleteById(id);
     }

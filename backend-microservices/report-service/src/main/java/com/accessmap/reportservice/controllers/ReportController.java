@@ -71,6 +71,14 @@ public class ReportController {
         return ResponseEntity.ok(reportService.updateStatus(id, status));
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "Modifier un signalement")
+    public ResponseEntity<Report> update(
+            @PathVariable UUID id,
+            @Valid @RequestBody ReportRequest request) {
+        return ResponseEntity.ok(reportService.updateReport(id, request));
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Supprimer un signalement")
