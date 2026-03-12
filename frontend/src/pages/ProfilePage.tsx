@@ -44,7 +44,7 @@ export default function ProfilePage() {
       // Charger TOUT pour admin
       Promise.all([
         fetch(`${REPORT_API}/api/reports`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
-        fetch(`${REPORT_API}/api/reports/pending?requesterRole=${role}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+        fetch(`${REPORT_API}/api/reports/pending?requesterRole=${role}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).catch(() => []),
         fetch(`${REPORT_API}/api/reports/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
       ]).then(([all, pend, mine]) => {
         setAllReports(Array.isArray(all) ? all : []);

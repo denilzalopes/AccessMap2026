@@ -158,6 +158,8 @@ export default function App() {
           <Routes>
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
             <Route path="/" element={<PrivateRoute><MapPage /></PrivateRoute>} />
             <Route path="/my-reports" element={<PrivateRoute><MyReportsPage /></PrivateRoute>} />
             <Route path="/community" element={<PrivateRoute><CommunityPage /></PrivateRoute>} />
