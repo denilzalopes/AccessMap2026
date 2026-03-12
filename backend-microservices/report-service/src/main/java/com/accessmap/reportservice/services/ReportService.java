@@ -5,6 +5,8 @@ import com.accessmap.reportservice.models.*;
 import com.accessmap.reportservice.repositories.ReportRepository;
 import com.accessmap.reportservice.repositories.VoteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -23,6 +25,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ReportService {
+
+    @Value("${notification.service.url:https://notification-service-hhbj.onrender.com}")
+    private String notifUrl;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    private void notifyAsync(String url) {
+        try { restTemplate.postForEntity(url, null, Void.class); }
+        catch (Exception e) { /* notification non bloquante */ }
+    }
 
     private final ReportRepository reportRepository;
     private final VoteRepository voteRepository;
@@ -64,7 +76,13 @@ public class ReportService {
         report.setPhotoUrl(req.getPhotoUrl());
         report.setCreatedBy(UUID.fromString(req.getCreatedBy()));
         report.setStatus(Status.PENDING);
-        return reportRepository.save(report);
+        Report saved = reportRepository.save(report);
+        // Notifier l'auteur du vote (non bloquant)
+        notifyAsync(notifUrl + "/api/notifications/vote-notification?to=&category="
+            + saved.getCategory().name()
+            + "&votesUp=" + saved.getVotesUp()
+            + "&votesDown=" + saved.getVotesDown());
+        return saved;
     }
 
     @Transactional
