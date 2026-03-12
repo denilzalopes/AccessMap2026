@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
+import { CAT_MAP } from '../constants/categories';
 import toast from 'react-hot-toast';
+import { CAT_MAP } from '../constants/categories';
 
 const REPORT_API = import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082';
 const AUTH_API   = import.meta.env.VITE_AUTH_API_URL   || 'http://localhost:8080';

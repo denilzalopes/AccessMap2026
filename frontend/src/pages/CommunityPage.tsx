@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
+import { CAT_MAP } from '../constants/categories';
+import ReportCard from '../components/ReportCard';
 import toast from 'react-hot-toast';
+import { CAT_MAP } from '../constants/categories';
 
 const REPORT_API = import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082';
 
@@ -112,9 +115,7 @@ export default function CommunityPage() {
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <span style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11 }}>
-                    {r.latitude?.toFixed(4)}, {r.longitude?.toFixed(4)}
-                  </span>
+                  <span style={{ color: 'rgba(240,242,255,0.3)', fontSize: 12 }}>{r.latitude?.toFixed(4)}, {r.longitude?.toFixed(4)}</span>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button
                       onClick={() => handleVote(r.id, r.createdBy, 'UP')}

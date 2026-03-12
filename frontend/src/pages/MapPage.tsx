@@ -26,6 +26,9 @@ export default function MapPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [filter, setFilter] = useState('all');
+  const [showTransport, setShowTransport] = useState(false);
+  const [transportType, setTransportType] = useState('all');
+  const transportMarkersRef = (window as any).__transportMarkers || [];
   const [reports, setReports] = useState<any[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
@@ -45,6 +48,47 @@ export default function MapPage() {
     return () => { if (leafletMapRef.current) { leafletMapRef.current.remove(); leafletMapRef.current = null; } };
   }, []);
 
+  const fetchTransports = async (lat: number, lon: number, type: string) => {
+    const L = (window as any).L;
+    if (!L || !leafletMapRef.current) return;
+    // Supprimer anciens marqueurs
+    if ((window as any).__transportMarkers) {
+      (window as any).__transportMarkers.forEach((m: any) => m.remove());
+    }
+    (window as any).__transportMarkers = [];
+    if (!showTransport) return;
+    try {
+      const query = `[out:json][timeout:15];(
+        node["highway"="bus_stop"](around:1200,${lat},${lon});
+        node["amenity"="bus_station"](around:1200,${lat},${lon});
+        node["railway"="subway_entrance"](around:1200,${lat},${lon});
+        node["railway"="station"](around:1200,${lat},${lon});
+      );out body;`;
+      const res = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query));
+      const data = await res.json();
+      (data.elements || []).forEach((t: any) => {
+        const isMetro = t.tags?.railway === 'subway_entrance';
+        const isTrain = t.tags?.railway === 'station';
+        const isBus   = t.tags?.highway === 'bus_stop' || t.tags?.amenity === 'bus_station';
+        if (type === 'metro' && !isMetro) return;
+        if (type === 'train' && !isTrain) return;
+        if (type === 'bus' && !isBus) return;
+        const icon  = isMetro ? '🚇' : isTrain ? '🚉' : '🚌';
+        const color = isMetro ? '#818CF8' : isTrain ? '#F59E0B' : '#22C55E';
+        const name  = t.tags?.name || (isMetro ? 'Metro' : isTrain ? 'Gare' : 'Arret bus');
+        const marker = L.marker([t.lat, t.lon], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="background:${color};border:2px solid white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.5)">${icon}</div>`,
+            iconSize: [30, 30], iconAnchor: [15, 15],
+          })
+        }).addTo(leafletMapRef.current)
+          .bindPopup(`<div style="font-family:'Plus Jakarta Sans',sans-serif;padding:4px"><strong>${name}</strong><br/><span style="color:#666;font-size:12px">${icon} ${isMetro ? 'Metro' : isTrain ? 'Gare' : 'Bus'}</span></div>`);
+        (window as any).__transportMarkers.push(marker);
+      });
+    } catch(e) { console.error('Transport error', e); }
+  };
+
   const initMap = () => {
     if (!mapRef.current || !(window as any).L) return;
     const L = (window as any).L;
@@ -57,7 +101,7 @@ export default function MapPage() {
     leafletMapRef.current = map;
 
     const token = localStorage.getItem('accessToken');
-    fetch('http://localhost:8082/api/reports', {
+    fetch(`${import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082'}/api/reports`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).then(r => r.json()).then(data => {
       const arr = Array.isArray(data) ? data : data.content || [];
@@ -97,6 +141,7 @@ export default function MapPage() {
         </div>
         <div style="font-size:11px;color:rgba(240,242,255,0.5);margin-bottom:8px">${report.description || 'Aucune description'}</div>
         <div style="display:flex;gap:10px;font-size:11px">
+          <span style="color:rgba(255,255,255,0.5);font-size:11px">📍 Chargement adresse...</span>
           <span style="color:#22C55E;font-weight:600">👍 ${report.votesUp || 0}</span>
           <span style="color:#E879A0;font-weight:600">👎 ${report.votesDown || 0}</span>
         </div>
@@ -112,7 +157,31 @@ export default function MapPage() {
           <svg viewBox="0 0 20 20" fill="none" stroke="rgba(240,242,255,0.3)" strokeWidth={1.6} strokeLinecap="round" width={16} height={16}><circle cx="9" cy="9" r="7"/><line x1="14" y1="14" x2="18" y2="18"/></svg>
           <input placeholder="Rechercher un lieu..." style={{ flex:1, border:'none', background:'transparent', fontSize:15, color:'#F0F2FF', outline:'none', fontFamily:'inherit' }}/>
         </div>
-        <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'none', paddingBottom:4 }}>
+        <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'none', paddingBottom:4, flexWrap:'nowrap' }}>
+          <button
+            onClick={() => {
+              const newVal = !showTransport;
+              setShowTransport(newVal);
+              const center = leafletMapRef.current?.getCenter();
+              if (newVal && center) fetchTransports(center.lat, center.lng, transportType);
+              else if (!newVal && (window as any).__transportMarkers) {
+                (window as any).__transportMarkers.forEach((m: any) => m.remove());
+                (window as any).__transportMarkers = [];
+              }
+            }}
+            style={{ flexShrink:0, padding:'6px 14px', borderRadius:20, border:'none', cursor:'pointer', fontSize:12, fontWeight:600, fontFamily:'inherit', background: showTransport ? '#4B55E8' : 'rgba(255,255,255,0.06)', color: showTransport ? 'white' : 'rgba(240,242,255,0.4)', transition:'all 0.15s', display:'flex', alignItems:'center', gap:5 }}
+          >
+            🚇 Transports
+          </button>
+          {showTransport && ['all','bus','metro','train'].map(t => (
+            <button key={t} onClick={() => {
+              setTransportType(t);
+              const center = leafletMapRef.current?.getCenter();
+              if (center) fetchTransports(center.lat, center.lng, t);
+            }} style={{ flexShrink:0, padding:'6px 14px', borderRadius:20, border:'none', cursor:'pointer', fontSize:11, fontWeight:600, fontFamily:'inherit', background: transportType === t ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.04)', color: transportType === t ? 'white' : 'rgba(240,242,255,0.4)', transition:'all 0.15s' }}>
+              {t === 'all' ? 'Tous' : t === 'bus' ? '🚌 Bus' : t === 'metro' ? '🚇 Metro' : '🚉 Gares'}
+            </button>
+          ))}
           {FILTERS.map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)} style={{ flexShrink:0, padding:'6px 14px', borderRadius:20, border:'none', cursor:'pointer', fontSize:12, fontWeight:600, fontFamily:'inherit', background: filter===f.id ? f.color : 'rgba(255,255,255,0.06)', color: filter===f.id ? 'white' : 'rgba(240,242,255,0.4)', transition:'all 0.15s', display:'flex', alignItems:'center', gap:5 }}>
               {filter !== f.id && <div style={{ width:6, height:6, borderRadius:'50%', background:f.color }}/>}
