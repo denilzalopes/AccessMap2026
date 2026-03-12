@@ -72,19 +72,29 @@ public class ReportController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier un signalement")
+    @Operation(summary = "Modifier un signalement (propriétaire uniquement)")
     public ResponseEntity<Report> update(
             @PathVariable UUID id,
             @Valid @RequestBody ReportRequest request) {
-        return ResponseEntity.ok(reportService.updateReport(id, request));
+        try {
+            return ResponseEntity.ok(reportService.updateReport(id, request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).build();
+        }
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Supprimer un signalement")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        reportService.deleteReport(id);
-        return ResponseEntity.noContent().build();
+    @Operation(summary = "Supprimer un signalement (propriétaire uniquement)")
+    public ResponseEntity<Void> delete(
+            @PathVariable UUID id,
+            @RequestParam UUID userId) {
+        try {
+            reportService.deleteReport(id, userId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).build();
+        }
     }
 
     @PostMapping("/{reportId}/vote")

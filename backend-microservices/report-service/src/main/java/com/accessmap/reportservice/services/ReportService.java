@@ -79,13 +79,21 @@ public class ReportService {
     public Report updateReport(UUID id, ReportRequest request) {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
+        if (!report.getCreatedBy().equals(UUID.fromString(request.getCreatedBy()))) {
+            throw new RuntimeException("Forbidden: you can only edit your own reports");
+        }
         report.setCategory(com.accessmap.reportservice.models.Category.valueOf(request.getCategory()));
         report.setDescription(request.getDescription());
         if (request.getPhotoUrl() != null) report.setPhotoUrl(request.getPhotoUrl());
         return reportRepository.save(report);
     }
 
-    public void deleteReport(UUID id) {
+    public void deleteReport(UUID id, UUID requestingUserId) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+        if (!report.getCreatedBy().equals(requestingUserId)) {
+            throw new RuntimeException("Forbidden: you can only delete your own reports");
+        }
         reportRepository.deleteById(id);
     }
 
