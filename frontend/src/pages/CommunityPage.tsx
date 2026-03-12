@@ -105,9 +105,9 @@ export default function CommunityPage() {
   const [voting,  setVoting]  = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${REPORT_API}/api/reports`)
+    fetch(`${REPORT_API}/api/reports?status=VALIDATED`)
       .then(r => r.ok ? r.json() : [])
-      .then(data => { setReports(Array.isArray(data) ? data : data.content || []); setLoading(false); })
+      .then(data => { const arr = Array.isArray(data) ? data : data.content || []; setReports(arr.filter((r:any) => r.status === 'VALIDATED')); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 

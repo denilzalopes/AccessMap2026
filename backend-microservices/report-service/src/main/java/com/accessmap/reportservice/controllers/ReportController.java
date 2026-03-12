@@ -97,9 +97,14 @@ public class ReportController {
     @Operation(summary = "Supprimer un signalement (propriétaire uniquement)")
     public ResponseEntity<Void> delete(
             @PathVariable UUID id,
-            @RequestParam UUID userId) {
+            @RequestParam String userId) {
         try {
-            reportService.deleteReport(id, userId);
+            try {
+                UUID userUUID = UUID.fromString(userId);
+                reportService.deleteReport(id, userUUID);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.status(400).build();
+            }
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
@@ -110,7 +115,7 @@ public class ReportController {
     @Operation(summary = "Voter pour/contre un signalement")
     public ResponseEntity<Report> vote(
             @PathVariable UUID reportId,
-            @RequestParam UUID userId,
+            @RequestParam String userId,
             @RequestParam VoteType type) {
         return ResponseEntity.ok(reportService.vote(reportId, userId, type));
     }

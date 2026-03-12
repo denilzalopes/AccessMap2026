@@ -39,6 +39,7 @@ export default function MapPage() {
   const [searchQuery, setSearchQuery]     = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchFocus, setSearchFocus]     = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<{lat:number;lon:number;label:string}|null>(null);
 
   useEffect(() => {
     if (!mapRef.current || leafletMapRef.current) return;
@@ -75,10 +76,14 @@ export default function MapPage() {
   const selectSearchResult = (item: any) => {
     const lat = parseFloat(item.lat);
     const lon = parseFloat(item.lon);
-    leafletMapRef.current?.setView([lat, lon], 16);
-    setSearchQuery(item.display_name.split(',').slice(0,2).join(', '));
+    const label = item.display_name.split(',').slice(0,3).join(', ');
+    // Centrer la carte
+    leafletMapRef.current?.setView([lat, lon], 17);
+    setSearchQuery(label);
     setSearchResults([]);
     setSearchFocus(false);
+    // Proposer de signaler à cet endroit
+    setSelectedPlace({ lat, lon, label });
   };
 
   const initMap = () => {
@@ -175,6 +180,24 @@ export default function MapPage() {
               <button onClick={() => { setSearchQuery(''); setSearchResults([]); }} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(240,242,255,0.4)', fontSize:16, padding:0 }}>✕</button>
             )}
           </div>
+
+          {/* Bannière signaler ici */}
+          {selectedPlace && (
+            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'rgba(75,85,232,0.12)', border:'1px solid rgba(75,85,232,0.3)', borderRadius:12, marginTop:8 }}>
+              <svg width="14" height="14" fill="#818CF8" viewBox="0 0 24 24" style={{ flexShrink:0 }}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              <span style={{ flex:1, color:'#818CF8', fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{selectedPlace.label}</span>
+              <button
+                onClick={() => {
+                  navigate('/report/new', { state: { lat: selectedPlace.lat, lon: selectedPlace.lon, address: selectedPlace.label } });
+                  setSelectedPlace(null);
+                }}
+                style={{ flexShrink:0, padding:'6px 12px', borderRadius:10, border:'none', background:'#4B55E8', color:'white', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}
+              >
+                Signaler ici
+              </button>
+              <button onClick={() => setSelectedPlace(null)} style={{ background:'none', border:'none', color:'rgba(240,242,255,0.3)', cursor:'pointer', fontSize:16, padding:0 }}>✕</button>
+            </div>
+          )}
 
           {/* Résultats recherche */}
           {searchResults.length > 0 && searchFocus && (

@@ -94,7 +94,15 @@ public class ReportService {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Signalement introuvable : " + id));
         report.setStatus(newStatus);
-        return reportRepository.save(report);
+        Report saved = reportRepository.save(report);
+        // Notification email à l'auteur
+        String category = saved.getCategory() != null ? saved.getCategory().name() : "";
+        if (newStatus == Status.VALIDATED) {
+            notifyAsync(notifUrl + "/api/notifications/report-validated?to=&category=" + category);
+        } else if (newStatus == Status.REJECTED) {
+            notifyAsync(notifUrl + "/api/notifications/report-rejected?to=&category=" + category);
+        }
+        return saved;
     }
 
     @Transactional
@@ -110,12 +118,15 @@ public class ReportService {
         return reportRepository.save(report);
     }
 
+    @Transactional
     public void deleteReport(UUID id, UUID requestingUserId) {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
         if (!report.getCreatedBy().equals(requestingUserId)) {
             throw new RuntimeException("Forbidden: you can only delete your own reports");
         }
+        // Supprimer les votes associés d'abord
+        voteRepository.deleteAll(voteRepository.findByReportId(id));
         reportRepository.deleteById(id);
     }
 

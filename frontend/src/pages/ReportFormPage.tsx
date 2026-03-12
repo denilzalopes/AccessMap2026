@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../App';
 import { getAddressOnce, searchPlaces } from '../hooks/useAddress';
 import { CAT_MAP, CAT_GROUPS } from '../constants/categories';
@@ -55,13 +55,14 @@ const IconTrain = () => (
 export default function ReportFormPage() {
   const { userId } = useAuth();
   const navigate   = useNavigate();
+  const locState   = (useLocation().state || {}) as { lat?: number; lon?: number; address?: string };
 
   const [category,     setCategory]     = useState('');
   const [description,  setDescription]  = useState('');
-  const [latitude,     setLatitude]     = useState<number | null>(null);
-  const [longitude,    setLongitude]    = useState<number | null>(null);
+  const [latitude,     setLatitude]     = useState<number | null>(locState.lat || null);
+  const [longitude,    setLongitude]    = useState<number | null>(locState.lon || null);
   const [photoUrl,     setPhotoUrl]     = useState('');
-  const [address,      setAddress]      = useState('');
+  const [address,      setAddress]      = useState(locState.address || '');
   const [searchQuery,  setSearchQuery]  = useState('');
   const [searchResults,setSearchResults]= useState<any[]>([]);
   const [uploading,    setUploading]    = useState(false);
