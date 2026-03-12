@@ -56,6 +56,15 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getReportsNearby(lat, lon, radius));
     }
 
+    @GetMapping("/pending")
+    @Operation(summary = "Signalements en attente (ADMIN/MODERATOR)")
+    public ResponseEntity<List<Report>> getPending(@RequestParam String requesterRole) {
+        if (!"ADMIN".equals(requesterRole) && !"MODERATOR".equals(requesterRole)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(reportService.getPendingReports());
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Créer un signalement")

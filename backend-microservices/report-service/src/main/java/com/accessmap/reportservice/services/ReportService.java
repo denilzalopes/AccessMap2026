@@ -45,6 +45,10 @@ public class ReportService {
 
     // ── Lecture ─────────────────────────────────────────────────────────────
 
+    public List<Report> getPendingReports() {
+        return reportRepository.findByStatus(Status.PENDING);
+    }
+
     public List<Report> getAllReports() {
         return reportRepository.findAll();
     }

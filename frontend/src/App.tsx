@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import type { AccessibilityPrefs, AuthResponse } from './types';
 import { warmupServices } from './WarmupService';
 import SplashScreen from './pages/SplashScreen';
+import RegisterPage from './pages/RegisterPage';
+import AdminPage from './pages/AdminPage';
 
 // Pages
 import MapPage from './pages/MapPage';
@@ -54,7 +56,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 // ── Bottom Navigation ─────────────────────────────────────────────────────────
 function BottomNav() {
   const location = useLocation();
-  const hiddenRoutes = ['/login', '/onboarding', '/report/new'];
+  const hiddenRoutes = ['/login', '/register', '/onboarding', '/report/new'];
   if (hiddenRoutes.some(r => location.pathname.startsWith(r))) return null;
 
   const tabs = [
