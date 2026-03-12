@@ -82,7 +82,7 @@ public class ReportService {
         if (!report.getCreatedBy().equals(UUID.fromString(request.getCreatedBy()))) {
             throw new RuntimeException("Forbidden: you can only edit your own reports");
         }
-        report.setCategory(com.accessmap.reportservice.models.Category.valueOf(request.getCategory()));
+        if (request.getCategory() != null) report.setCategory(Category.valueOf(request.getCategory().toString()));
         report.setDescription(request.getDescription());
         if (request.getPhotoUrl() != null) report.setPhotoUrl(request.getPhotoUrl());
         return reportRepository.save(report);
