@@ -117,6 +117,6 @@ public class ReportController {
             @PathVariable UUID reportId,
             @RequestParam String userId,
             @RequestParam VoteType type) {
-        return ResponseEntity.ok(reportService.vote(reportId, userId, type));
+        return ResponseEntity.ok(reportService.vote(reportId, UUID.fromString(userId), type));
     }
 }
