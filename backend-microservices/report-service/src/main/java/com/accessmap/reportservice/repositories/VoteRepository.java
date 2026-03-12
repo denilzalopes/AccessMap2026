@@ -6,6 +6,4 @@ import java.util.Optional;
 import java.util.UUID;
 public interface VoteRepository extends JpaRepository<Vote, UUID> {
     Optional<Vote> findByReportIdAndUserId(UUID reportId, UUID userId);
-
-    java.util.List<Report> findByStatus(com.accessmap.reportservice.models.Status status);
 }
