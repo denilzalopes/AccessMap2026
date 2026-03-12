@@ -128,9 +128,9 @@ export default function ProfilePage() {
       {/* ── Tabs ── */}
       <div style={{ display:'flex', gap:8, padding:'16px 20px 4px' }}>
         <button style={S.tabBtn(tab==='stats')}    onClick={() => setTab('stats')}>
-          {isAdmin ? '📊 Dashboard' : '📊 Statistiques'}
+          {isAdmin ? 'Dashboard' : 'Statistiques'}
         </button>
-        <button style={S.tabBtn(tab==='settings')} onClick={() => setTab('settings')}>⚙️ Paramètres</button>
+        <button style={S.tabBtn(tab==='settings')} onClick={() => setTab('settings')}>Paramètres</button>
       </div>
 
       <div style={{ padding:'12px 20px' }}>

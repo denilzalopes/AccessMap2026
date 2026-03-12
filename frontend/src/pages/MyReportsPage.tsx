@@ -217,10 +217,10 @@ export default function MyReportsPage() {
                             onClick={() => setEditState({ id: r.id, category: r.category, description: r.description || '', photoUrl: r.photoUrl || '' })}
                             style={S.btnEdit}
                           >
-                            ✏️ Modifier
+                            Modifier
                           </button>
                           <button onClick={() => setConfirmDeleteId(r.id)} style={S.btnDel}>
-                            🗑️ Supprimer
+                            Supprimer
                           </button>
                         </div>
                       )}
