@@ -13,7 +13,7 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -27,13 +27,20 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final VoteRepository   voteRepository;
-    private final RestTemplate     restTemplate;
 
     @Value("${notification.service.url:https://notification-service-hhbj.onrender.com}")
     private String notificationUrl;
 
     private static final GeometryFactory GEOMETRY_FACTORY =
         new GeometryFactory(new PrecisionModel(), 4326);
+
+    // RestTemplate avec timeout court — ne bloque jamais la création
+    private RestTemplate buildFastRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);  // 3 secondes max
+        factory.setReadTimeout(3000);     // 3 secondes max
+        return new RestTemplate(factory);
+    }
 
     private Point buildPoint(double lat, double lon) {
         Point p = GEOMETRY_FACTORY.createPoint(new Coordinate(lon, lat));
@@ -55,12 +62,16 @@ public class ReportService {
             .photoUrl(req.getImageUrl())
             .build();
 
+        // 1. Sauvegarder d'abord — réponse immédiate garantie
         Report saved = reportRepository.save(report);
 
-        notifyAsync("SUBMITTED", saved.getAuthorEmail(), saved.getAuthorName(),
-                    saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
-        notifyAsync("NEW_REPORT_ADMIN", null, saved.getAuthorName(),
-                    saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
+        // 2. Notifications en arrière-plan — ne bloque JAMAIS la réponse
+        new Thread(() -> {
+            notifyAsync("SUBMITTED", saved.getAuthorEmail(), saved.getAuthorName(),
+                        saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
+            notifyAsync("NEW_REPORT_ADMIN", null, saved.getAuthorName(),
+                        saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
+        }).start();
 
         return saved;
     }
@@ -72,9 +83,10 @@ public class ReportService {
         report.setStatus(status);
         Report saved = reportRepository.save(report);
 
-        String type = (status == Status.VALIDATED) ? "VALIDATED" : "REJECTED";
-        notifyAsync(type, saved.getAuthorEmail(), saved.getAuthorName(),
-                    saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
+        final String type = (status == Status.VALIDATED) ? "VALIDATED" : "REJECTED";
+        new Thread(() -> notifyAsync(type, saved.getAuthorEmail(), saved.getAuthorName(),
+                    saved.getTitle(), saved.getCategory().name(), saved.getId().toString())).start();
+
         return saved;
     }
 
@@ -94,9 +106,8 @@ public class ReportService {
     public List<Report> getPendingReports()        { return reportRepository.findByStatus(Status.PENDING); }
     public Optional<Report> getById(UUID id)       { return reportRepository.findById(id); }
 
-    @Async
-    protected void notifyAsync(String type, String toEmail, String authorName,
-                               String reportTitle, String category, String reportId) {
+    private void notifyAsync(String type, String toEmail, String authorName,
+                              String reportTitle, String category, String reportId) {
         try {
             Map<String, String> body = new HashMap<>();
             body.put("type",        type);
@@ -108,13 +119,15 @@ public class ReportService {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            restTemplate.postForEntity(
+
+            buildFastRestTemplate().postForEntity(
                 notificationUrl + "/api/notifications/send",
                 new HttpEntity<>(body, headers),
                 Void.class
             );
+            log.info("Notification [{}] envoyee pour {}", type, authorName);
         } catch (Exception e) {
-            log.warn("Notification [{}] non envoyee : {}", type, e.getMessage());
+            log.warn("Notification [{}] non envoyee (service endormi?) : {}", type, e.getMessage());
         }
     }
 }

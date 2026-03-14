@@ -137,7 +137,7 @@ export default function ReportFormPage() {
       const authorEmail = email        || localStorage.getItem('email')        || '';
       const title       = CAT_MAP[category]?.label || category;
 
-      const res = await fetch(`${API_URL}/api/reports`, { signal: AbortSignal.timeout(30000),
+      const res = await fetch(`${API_URL}/api/reports`, { signal: AbortSignal.timeout(10000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

@@ -77,7 +77,7 @@ public class NotificationService {
     private void send(String to, String subject, String body) {
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setFrom("noreply@accessmap.app");
+            msg.setFrom("azlinedlopes@gmail.com");
             msg.setTo(to);
             msg.setSubject(subject);
             msg.setText(body);
