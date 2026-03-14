@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../App';
+import { apiFetch } from "../hooks/useApi";
 import { getAddressOnce, searchPlaces } from '../hooks/useAddress';
 import { CAT_MAP, CAT_GROUPS } from '../constants/categories';
 import toast from 'react-hot-toast';
@@ -137,9 +138,8 @@ export default function ReportFormPage() {
       const authorEmail = email        || localStorage.getItem('email')        || '';
       const title       = CAT_MAP[category]?.label || category;
 
-      const res = await fetch(`${API_URL}/api/reports`, { signal: AbortSignal.timeout(10000),
+      const res = await apiFetch(`${API_URL}/api/reports`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           userId,
           authorName,
