@@ -81,7 +81,7 @@ public class ReportService {
 
     public List<Report> getAllReports()             { return reportRepository.findAll(); }
     public List<Report> getByStatus(Status status) { return reportRepository.findByStatus(status); }
-    public List<Report> getByUserId(UUID userId)   { return reportRepository.findByCreatedBy(userId); }
+    public List<Report> getByUserId(UUID userId)   { return reportRepository.findByUserId(userId); }
     public List<Report> getPendingReports()        { return reportRepository.findByStatus(Status.PENDING); }
     public Optional<Report> getById(UUID id)       { return reportRepository.findById(id); }
 
