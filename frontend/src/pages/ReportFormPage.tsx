@@ -137,7 +137,7 @@ export default function ReportFormPage() {
       const authorEmail = email        || localStorage.getItem('email')        || '';
       const title       = CAT_MAP[category]?.label || category;
 
-      const res = await fetch(`${API_URL}/api/reports`, {
+      const res = await fetch(`${API_URL}/api/reports`, { signal: AbortSignal.timeout(30000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -149,7 +149,7 @@ export default function ReportFormPage() {
           description,
           latitude,
           longitude,
-          imageUrl: photoUrl || null,
+          imageUrl: photoUrl && photoUrl.length > 0 ? photoUrl : null,
         })
       });
       if (!res.ok) throw new Error();
