@@ -7,6 +7,10 @@ import com.accessmap.reportservice.repositories.ReportRepository;
 import com.accessmap.reportservice.repositories.VoteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
@@ -28,25 +32,33 @@ public class ReportService {
     @Value("${notification.service.url:https://notification-service-hhbj.onrender.com}")
     private String notificationUrl;
 
+    private static final GeometryFactory GEOMETRY_FACTORY =
+        new GeometryFactory(new PrecisionModel(), 4326);
+
+    private Point buildPoint(double lat, double lon) {
+        Point p = GEOMETRY_FACTORY.createPoint(new Coordinate(lon, lat));
+        p.setSRID(4326);
+        return p;
+    }
+
     @Transactional
     public Report createReport(CreateReportRequest req) {
         Report report = Report.builder()
             .userId(req.getUserId())
-            .authorName(req.getAuthorName())
-            .authorEmail(req.getAuthorEmail())
-            .title(req.getTitle())
+            .authorName(req.getAuthorName() != null ? req.getAuthorName() : "Anonyme")
+            .authorEmail(req.getAuthorEmail() != null ? req.getAuthorEmail() : "")
+            .title(req.getTitle() != null ? req.getTitle() : req.getCategory().name())
             .description(req.getDescription())
             .category(req.getCategory())
-            .latitude(req.getLatitude())
-            .longitude(req.getLongitude())
-            .imageUrl(req.getImageUrl())
+            .location(buildPoint(req.getLatitude(), req.getLongitude()))
+            .createdBy(req.getUserId())
+            .photoUrl(req.getImageUrl())
             .build();
 
         Report saved = reportRepository.save(report);
 
         notifyAsync("SUBMITTED", saved.getAuthorEmail(), saved.getAuthorName(),
                     saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
-
         notifyAsync("NEW_REPORT_ADMIN", null, saved.getAuthorName(),
                     saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
 
@@ -57,14 +69,12 @@ public class ReportService {
     public Report updateStatus(UUID id, Status status) {
         Report report = reportRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Report not found"));
-
         report.setStatus(status);
         Report saved = reportRepository.save(report);
 
         String type = (status == Status.VALIDATED) ? "VALIDATED" : "REJECTED";
         notifyAsync(type, saved.getAuthorEmail(), saved.getAuthorName(),
                     saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
-
         return saved;
     }
 
@@ -74,7 +84,6 @@ public class ReportService {
             .orElseThrow(() -> new RuntimeException("Report not found"));
         if (!report.getUserId().equals(userId))
             throw new RuntimeException("Unauthorized");
-
         voteRepository.deleteByReportId(id);
         reportRepository.delete(report);
     }
@@ -92,20 +101,18 @@ public class ReportService {
             Map<String, String> body = new HashMap<>();
             body.put("type",        type);
             body.put("toEmail",     toEmail != null ? toEmail : "");
-            body.put("authorName",  authorName);
+            body.put("authorName",  authorName != null ? authorName : "Anonyme");
             body.put("reportTitle", reportTitle);
             body.put("category",    category);
             body.put("reportId",    reportId);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
             restTemplate.postForEntity(
                 notificationUrl + "/api/notifications/send",
                 new HttpEntity<>(body, headers),
                 Void.class
             );
-            log.info("Notification [{}] envoyee pour {}", type, authorName);
         } catch (Exception e) {
             log.warn("Notification [{}] non envoyee : {}", type, e.getMessage());
         }

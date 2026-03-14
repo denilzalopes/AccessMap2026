@@ -2,6 +2,9 @@ package com.accessmap.reportservice.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.locationtech.jts.geom.Point;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -17,36 +20,60 @@ public class Report {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(nullable = false)
+    @Column(name = "author_name", nullable = false)
     private String authorName;
 
-    @Column(nullable = false)
+    @Column(name = "author_email", nullable = false)
     private String authorEmail;
 
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(columnDefinition = "GEOMETRY(POINT, 4326)")
+    @JsonIgnore
+    private Point location;
+
+    @JsonProperty("latitude")
+    public double getLatitude() { return location != null ? location.getY() : 0; }
+
+    @JsonProperty("longitude")
+    public double getLongitude() { return location != null ? location.getX() : 0; }
 
     @Enumerated(EnumType.STRING)
     private Category category;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "photo_url")
+    private String photoUrl;
+
+    @JsonProperty("imageUrl")
+    public String getImageUrl() { return photoUrl; }
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private Status status = Status.PENDING;
 
-    private Double latitude;
-    private Double longitude;
-
-    private String imageUrl;
+    @Column(name = "created_by")
+    private UUID createdBy;
 
     @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "votes_up")
+    @Builder.Default
+    private Integer votesUp = 0;
+
+    @Column(name = "votes_down")
+    @Builder.Default
+    private Integer votesDown = 0;
 }
