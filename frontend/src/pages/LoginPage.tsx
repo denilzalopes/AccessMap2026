@@ -5,13 +5,26 @@ import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8080';
 
+const EyeIcon = ({ open }: { open: boolean }) => open ? (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+) : (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+
 export default function LoginPage() {
   const { login } = useAuth();
-  const navigate = useNavigate();
-  const [email, setEmail]       = useState('');
+  const navigate  = useNavigate();
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [showPwd, setShowPwd]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [showPwd,  setShowPwd]  = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) { toast.error('Remplissez tous les champs'); return; }
@@ -36,6 +49,7 @@ export default function LoginPage() {
     border: '1px solid rgba(255,255,255,0.08)',
     background: 'rgba(255,255,255,0.05)', color: '#F0F2FF',
     fontSize: 15, fontFamily: 'inherit', outline: 'none',
+    transition: 'border-color 0.2s',
   };
 
   return (
@@ -62,15 +76,15 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Formulaire */}
-      <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Form */}
+      <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
           <label style={{ fontSize: 11, fontWeight: 700, color: 'rgba(240,242,255,0.35)', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: 7 }}>Email</label>
           <input
             type="email" placeholder="votre@email.com" value={email}
             onChange={e => setEmail(e.target.value)} style={inp}
-            onFocus={e => e.target.style.borderColor = '#4B55E8'}
-            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+            onFocus={e => (e.target.style.borderColor = '#4B55E8')}
+            onBlur={e  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
           />
         </div>
 
@@ -82,25 +96,28 @@ export default function LoginPage() {
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
               style={{ ...inp, paddingRight: 48 }}
-              onFocus={e => e.target.style.borderColor = '#4B55E8'}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+              onFocus={e => (e.target.style.borderColor = '#4B55E8')}
+              onBlur={e  => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
             />
-            <button onClick={() => setShowPwd(!showPwd)} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,242,255,0.3)', padding: 0, fontSize: 18 }}>
-              {showPwd ? '🙈' : '👁️'}
+            <button
+              onClick={() => setShowPwd(!showPwd)}
+              style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,242,255,0.3)', padding: 0, display: 'flex', alignItems: 'center' }}
+            >
+              <EyeIcon open={showPwd} />
             </button>
           </div>
         </div>
 
         <button
           onClick={handleLogin} disabled={loading}
-          style={{ marginTop: 8, width: '100%', padding: 15, borderRadius: 14, border: 'none', background: loading ? '#353575' : '#4B55E8', color: 'white', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 20px rgba(75,85,232,0.35)', transition: 'all 0.2s' }}
+          style={{ marginTop: 4, width: '100%', padding: 15, borderRadius: 14, border: 'none', background: loading ? '#353575' : '#4B55E8', color: 'white', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 20px rgba(75,85,232,0.35)', transition: 'all 0.2s' }}
         >
           {loading
             ? <><div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}/> Connexion...</>
             : 'Se connecter'}
         </button>
 
-        <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(240,242,255,0.4)', marginTop: 4 }}>
+        <div style={{ textAlign: 'center', fontSize: 14, color: 'rgba(240,242,255,0.4)' }}>
           Pas encore de compte ?{' '}
           <button onClick={() => navigate('/register')} style={{ background: 'none', border: 'none', color: '#818CF8', fontWeight: 700, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' }}>
             Créer un compte
