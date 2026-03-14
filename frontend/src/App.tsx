@@ -6,8 +6,6 @@ import { warmupServices } from './WarmupService';
 import SplashScreen from './pages/SplashScreen';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
-
-// Pages
 import MapPage from './pages/MapPage';
 import ReportFormPage from './pages/ReportFormPage';
 import MyReportsPage from './pages/MyReportsPage';
@@ -16,44 +14,43 @@ import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import OnboardingPage from './pages/OnboardingPage';
 
-// ── Contexte Auth ─────────────────────────────────────────────────────────────
 interface AuthContextType {
   isAuthenticated: boolean;
-  userId: string | null;
+  userId:      string | null;
   displayName: string | null;
-  role: string | null;
-  login: (data: AuthResponse) => void;
-  logout: () => void;
-  prefs: AccessibilityPrefs;
+  email:       string | null;
+  role:        string | null;
+  login:       (data: AuthResponse) => void;
+  logout:      () => void;
+  prefs:       AccessibilityPrefs;
   updatePrefs: (prefs: Partial<AccessibilityPrefs>) => void;
 }
 
 const defaultPrefs: AccessibilityPrefs = {
   highVisibility: false,
-  voiceReading: false,
-  textSize: 'medium'
+  voiceReading:   false,
+  textSize:       'medium'
 };
 
 export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
-  userId: null,
+  userId:      null,
   displayName: null,
-  role: null,
-  login: () => {},
-  logout: () => {},
-  prefs: defaultPrefs,
+  email:       null,
+  role:        null,
+  login:       () => {},
+  logout:      () => {},
+  prefs:       defaultPrefs,
   updatePrefs: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-// ── Guard route privée ────────────────────────────────────────────────────────
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
-// ── Bottom Navigation ─────────────────────────────────────────────────────────
 function BottomNav() {
   const location = useLocation();
   const hiddenRoutes = ['/login', '/register', '/onboarding', '/report/new'];
@@ -67,19 +64,11 @@ function BottomNav() {
   ];
 
   return (
-    <nav
-      className="bottom-nav"
-      role="navigation"
-      aria-label="Navigation principale"
-    >
+    <nav className="bottom-nav" role="navigation" aria-label="Navigation principale">
       {tabs.map(tab => (
-        <a
-          key={tab.path}
-          href={tab.path}
+        <a key={tab.path} href={tab.path}
           className={`bottom-nav__item ${location.pathname === tab.path ? 'bottom-nav__item--active' : ''}`}
-          aria-label={tab.label}
-          aria-current={location.pathname === tab.path ? 'page' : undefined}
-        >
+          aria-label={tab.label} aria-current={location.pathname === tab.path ? 'page' : undefined}>
           <span className="bottom-nav__icon" aria-hidden="true" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>{tab.icon}</span>
           <span className="bottom-nav__label">{tab.label}</span>
         </a>
@@ -88,18 +77,17 @@ function BottomNav() {
   );
 }
 
-// ── App Principal ─────────────────────────────────────────────────────────────
 export default function App() {
-  const [warmupDone, setWarmupDone] = useState(false);
+  const [warmupDone, setWarmupDone]         = useState(false);
   const [warmupProgress, setWarmupProgress] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('accessToken'));
-  const [userId, setUserId] = useState<string | null>(localStorage.getItem('userId'));
+  const [userId,      setUserId]      = useState<string | null>(localStorage.getItem('userId'));
   const [displayName, setDisplayName] = useState<string | null>(localStorage.getItem('displayName'));
-  const [role, setRole] = useState<string | null>(localStorage.getItem('role'));
+  const [email,       setEmail]       = useState<string | null>(localStorage.getItem('email'));
+  const [role,        setRole]        = useState<string | null>(localStorage.getItem('role'));
   const [prefs, setPrefs] = useState<AccessibilityPrefs>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('prefs') || 'null') ?? defaultPrefs;
-    } catch { return defaultPrefs; }
+    try { return JSON.parse(localStorage.getItem('prefs') || 'null') ?? defaultPrefs; }
+    catch { return defaultPrefs; }
   });
 
   useEffect(() => {
@@ -107,7 +95,6 @@ export default function App() {
       .finally(() => { setWarmupProgress(100); setTimeout(() => setWarmupDone(true), 500); });
   }, []);
 
-  // Appliquer les préférences d'accessibilité au document
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-text-size', prefs.textSize);
@@ -115,14 +102,16 @@ export default function App() {
   }, [prefs]);
 
   const login = (data: AuthResponse) => {
-    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('accessToken',  data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
-    localStorage.setItem('userId', data.userId);
-    localStorage.setItem('displayName', data.displayName);
-    localStorage.setItem('role', data.role);
+    localStorage.setItem('userId',       data.userId);
+    localStorage.setItem('displayName',  data.displayName);
+    localStorage.setItem('email',        data.email ?? '');
+    localStorage.setItem('role',         data.role);
     setIsAuthenticated(true);
     setUserId(data.userId);
     setDisplayName(data.displayName);
+    setEmail(data.email ?? null);
     setRole(data.role);
   };
 
@@ -131,6 +120,7 @@ export default function App() {
     setIsAuthenticated(false);
     setUserId(null);
     setDisplayName(null);
+    setEmail(null);
     setRole(null);
   };
 
@@ -145,25 +135,19 @@ export default function App() {
   if (!warmupDone) return <SplashScreen />;
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userId, displayName, role, login, logout, prefs, updatePrefs }}>
+    <AuthContext.Provider value={{ isAuthenticated, userId, displayName, email, role, login, logout, prefs, updatePrefs }}>
       <BrowserRouter>
         <div className="app" data-text-size={prefs.textSize} data-high-visibility={prefs.highVisibility}>
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: 3000,
-              style: { fontFamily: 'Sora, sans-serif', fontSize: '14px' }
-            }}
-          />
+          <Toaster position="top-center" toastOptions={{ duration: 3000, style: { fontFamily: 'Sora, sans-serif', fontSize: '14px' } }} />
           <Routes>
             <Route path="/onboarding" element={<OnboardingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
-            <Route path="/" element={<PrivateRoute><MapPage /></PrivateRoute>} />
+            <Route path="/login"      element={<LoginPage />} />
+            <Route path="/register"   element={<RegisterPage />} />
+            <Route path="/admin"      element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+            <Route path="/"           element={<PrivateRoute><MapPage /></PrivateRoute>} />
             <Route path="/my-reports" element={<PrivateRoute><MyReportsPage /></PrivateRoute>} />
-            <Route path="/community" element={<PrivateRoute><CommunityPage /></PrivateRoute>} />
-            <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+            <Route path="/community"  element={<PrivateRoute><CommunityPage /></PrivateRoute>} />
+            <Route path="/profile"    element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
             <Route path="/report/new" element={<PrivateRoute><ReportFormPage /></PrivateRoute>} />
           </Routes>
           <BottomNav />

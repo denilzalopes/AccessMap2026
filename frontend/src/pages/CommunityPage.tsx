@@ -55,15 +55,30 @@ function ReportItem({ r, userId, onVote, voting }: { r: any; userId: string | nu
         </div>
       </div>
 
+      {/* Titre */}
+      {r.title && (
+        <p style={{ color:'#F0F2FF', fontSize:15, fontWeight:600, margin:'0 0 6px' }}>{r.title}</p>
+      )}
+
       {/* Description */}
       {r.description && (
-        <p style={{ color:'#F0F2FF', fontSize:14, margin:'0 0 10px', lineHeight:1.5 }}>{r.description}</p>
+        <p style={{ color:'rgba(240,242,255,0.7)', fontSize:14, margin:'0 0 10px', lineHeight:1.5 }}>{r.description}</p>
       )}
 
       {/* Photo */}
-      {r.photoUrl && (
-        <img src={r.photoUrl} alt="Photo" style={{ width:'100%', borderRadius:10, marginBottom:10, objectFit:'cover', maxHeight:180 }}/>
+      {(r.imageUrl || r.photoUrl) && (
+        <img src={r.imageUrl || r.photoUrl} alt="Photo" style={{ width:'100%', borderRadius:10, marginBottom:10, objectFit:'cover', maxHeight:180 }}/>
       )}
+
+      {/* Auteur */}
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+        <div style={{ width:22, height:22, borderRadius:'50%', background:'linear-gradient(135deg,#4B55E8,#818CF8)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'white', flexShrink:0 }}>
+          {(r.authorName || 'A')[0].toUpperCase()}
+        </div>
+        <span style={{ color:'rgba(240,242,255,0.5)', fontSize:12, fontWeight:600 }}>
+          {r.authorName || 'Anonyme'}
+        </span>
+      </div>
 
       {/* Adresse réelle */}
       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
@@ -107,7 +122,11 @@ export default function CommunityPage() {
   useEffect(() => {
     fetch(`${REPORT_API}/api/reports?status=VALIDATED`)
       .then(r => r.ok ? r.json() : [])
-      .then(data => { const arr = Array.isArray(data) ? data : data.content || []; setReports(arr.filter((r:any) => r.status === 'VALIDATED')); setLoading(false); })
+      .then(data => {
+        const arr = Array.isArray(data) ? data : data.content || [];
+        setReports(arr.filter((r:any) => r.status === 'VALIDATED'));
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -134,13 +153,11 @@ export default function CommunityPage() {
 
   return (
     <div style={{ minHeight:'100dvh', background:'#07071A', fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif", paddingBottom:80 }}>
-      {/* Header */}
       <div style={{ padding:'52px 20px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
         <h1 style={{ color:'#F0F2FF', fontSize:22, fontWeight:700, margin:'0 0 4px' }}>Communauté</h1>
         <p style={{ color:'rgba(240,242,255,0.35)', fontSize:13, margin:0 }}>{reports.length} signalement{reports.length !== 1 ? 's' : ''}</p>
       </div>
 
-      {/* Filtres */}
       <div style={{ padding:'12px 0 0', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'none', padding:'0 20px 12px' }}>
           {filters.map(f => (
@@ -151,7 +168,6 @@ export default function CommunityPage() {
         </div>
       </div>
 
-      {/* Liste */}
       <div style={{ padding:'16px 20px' }}>
         {loading && (
           <div style={{ display:'flex', justifyContent:'center', padding:60 }}>
@@ -166,13 +182,13 @@ export default function CommunityPage() {
         ))}
       </div>
 
-      {/* FAB */}
       <button onClick={() => navigate('/report/new')}
         style={{ position:'fixed', bottom:86, right:16, width:52, height:52, borderRadius:'50%', background:'#4B55E8', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 20px rgba(75,85,232,0.45)', zIndex:1000 }}
         onMouseEnter={e => (e.currentTarget.style.transform='scale(1.08)')}
         onMouseLeave={e => (e.currentTarget.style.transform='scale(1)')}>
         <svg viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" width={20} height={20}><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></svg>
       </button>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

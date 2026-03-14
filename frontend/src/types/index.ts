@@ -12,89 +12,115 @@ export interface User {
 
 export interface AccessibilityPrefs {
   highVisibility: boolean;
-  voiceReading: boolean;
-  textSize: 'small' | 'medium' | 'large';
+  voiceReading:   boolean;
+  textSize:       'small' | 'medium' | 'large';
 }
 
 // ── Authentification ─────────────────────────────────────────────────────────
 export interface AuthResponse {
-  accessToken: string;
+  accessToken:  string;
   refreshToken: string;
-  userId: string;
-  email: string;
-  displayName: string;
-  role: Role;
-  tokenType: string;
+  userId:       string;
+  email:        string;
+  displayName:  string;
+  role:         Role;
+  tokenType:    string;
 }
 
 // ── Signalements ─────────────────────────────────────────────────────────────
-export type Category = 'STEP' | 'RAMP' | 'ELEVATOR' | 'SIDEWALK' | 'SIGNAGE' | 'PARKING';
+export type Category =
+  | 'STEP' | 'RAMP' | 'SIDEWALK' | 'SIGNAGE' | 'PARKING'
+  | 'ELEVATOR' | 'ESCALATOR_BROKEN'
+  | 'NO_ELEVATOR' | 'NO_ESCALATOR'
+  | 'INACCESSIBLE_ENTRY' | 'INACCESSIBLE_PLATFORM' | 'INACCESSIBLE_STOP' | 'NARROW_PASSAGE';
+
 export type ReportStatus = 'PENDING' | 'VALIDATED' | 'REJECTED' | 'RESOLVED';
 export type VoteType = 'UP' | 'DOWN';
 
 export interface Report {
-  id: string;
-  latitude: number;
-  longitude: number;
-  category: Category;
+  id:           string;
+  userId:       string;
+  authorName:   string;
+  authorEmail:  string;
+  title:        string;
   description?: string;
-  photoUrl?: string;
-  status: ReportStatus;
-  createdBy: string;
-  createdAt: string;
-  votesUp: number;
-  votesDown: number;
+  category:     Category;
+  status:       ReportStatus;
+  latitude:     number;
+  longitude:    number;
+  imageUrl?:    string;
+  createdAt:    string;
+  updatedAt?:   string;
+  votesUp?:     number;
+  votesDown?:   number;
 }
 
 export interface MapReport {
-  id: string;
-  latitude: number;
-  longitude: number;
-  category: Category;
-  status: ReportStatus;
-  votesUp: number;
-  votesDown: number;
+  id:           string;
+  latitude:     number;
+  longitude:    number;
+  category:     Category;
+  status:       ReportStatus;
+  votesUp?:     number;
+  votesDown?:   number;
   description?: string;
 }
 
 export interface CreateReportRequest {
-  latitude: number;
-  longitude: number;
-  category: Category;
+  userId:       string;
+  authorName:   string;
+  authorEmail:  string;
+  title:        string;
   description?: string;
-  photoUrl?: string;
-  createdBy: string;
+  category:     Category;
+  latitude:     number;
+  longitude:    number;
+  imageUrl?:    string;
 }
 
 // ── Labels UI ─────────────────────────────────────────────────────────────────
 export const CATEGORY_LABELS: Record<Category, string> = {
-  STEP: 'Marche',
-  RAMP: 'Rampe',
-  ELEVATOR: 'Ascenseur',
-  SIDEWALK: 'Trottoir',
-  SIGNAGE: 'Signalétique',
-  PARKING: 'Stationnement'
+  STEP:                  'Marche / Escalier',
+  RAMP:                  'Rampe manquante',
+  SIDEWALK:              'Trottoir impraticable',
+  SIGNAGE:               'Signalétique absente',
+  PARKING:               'Stationnement inaccessible',
+  ELEVATOR:              'Ascenseur en panne',
+  ESCALATOR_BROKEN:      'Escalator en panne',
+  NO_ELEVATOR:           'Ascenseur absent',
+  NO_ESCALATOR:          'Escalator absent',
+  INACCESSIBLE_ENTRY:    'Entrée inaccessible',
+  INACCESSIBLE_PLATFORM: 'Quai inaccessible',
+  INACCESSIBLE_STOP:     'Arrêt inaccessible',
+  NARROW_PASSAGE:        'Passage étroit',
 };
 
 export const CATEGORY_ICONS: Record<Category, string> = {
-  STEP: '🪜',
-  RAMP: '⛰️',
-  ELEVATOR: '🛗',
-  SIDEWALK: '🚶',
-  SIGNAGE: '🔷',
-  PARKING: '🅿️'
+  STEP:                  '🪜',
+  RAMP:                  '⛰️',
+  SIDEWALK:              '🚶',
+  SIGNAGE:               '🔷',
+  PARKING:               '🅿️',
+  ELEVATOR:              '🛗',
+  ESCALATOR_BROKEN:      '🔧',
+  NO_ELEVATOR:           '🚫🛗',
+  NO_ESCALATOR:          '🚫',
+  INACCESSIBLE_ENTRY:    '🚪',
+  INACCESSIBLE_PLATFORM: '🚉',
+  INACCESSIBLE_STOP:     '🚌',
+  NARROW_PASSAGE:        '↔️',
 };
 
 export const STATUS_COLORS: Record<ReportStatus, string> = {
-  PENDING: '#FBBF24',
+  PENDING:   '#FBBF24',
   VALIDATED: '#34D399',
-  REJECTED: '#F87171',
-  RESOLVED: '#60A5FA'
+  REJECTED:  '#F87171',
+  RESOLVED:  '#60A5FA',
 };
 
 export const STATUS_LABELS: Record<ReportStatus, string> = {
-  PENDING: 'En attente',
+  PENDING:   'En attente',
   VALIDATED: 'Validé',
-  REJECTED: 'Rejeté',
-  RESOLVED: 'Résolu'
+  REJECTED:  'Rejeté',
+  RESOLVED:  'Résolu',
 };

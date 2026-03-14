@@ -1,68 +1,90 @@
 package com.accessmap.notificationservice.services;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-/** Service notifications — envoi d'emails via JavaMailSender (Mailtrap en dev) */
-@Service @RequiredArgsConstructor
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
 public class NotificationService {
+
     private final JavaMailSender mailSender;
-    public void sendEmail(String to, String subject, String body) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("noreply@accessmap.app");
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(body);
-        mailSender.send(message);
-    }
-    public void sendWelcomeEmail(String to, String displayName) {
-        sendEmail(to, "Bienvenue sur AccessMap 🗺️",
-            "Bonjour " + displayName + ",\n\nMerci de rejoindre AccessMap !\nEnsemble, améliorons l'accessibilité urbaine.\n\nL'équipe AccessMap");
-    }
-    public void sendReportValidatedEmail(String to, String category) {
-        sendEmail(to,
-            "✅ Votre signalement AccessMap a été validé",
-            "Bonjour,\n\n" +
-            "Bonne nouvelle ! Votre signalement de type \"" + category + "\" a été validé par notre équipe.\n" +
-            "Il est maintenant visible sur la carte AccessMap et aidera d'autres personnes.\n\n" +
-            "Merci pour votre contribution à l'accessibilité urbaine !\n\n" +
-            "L'équipe AccessMap\nhttps://app-accessmap.netlify.app"
-        );
+
+    @Value("${app.admin.email:azlinedlopes@gmail.com}")
+    private String adminEmail;
+
+    public void sendReportSubmittedToContributor(String toEmail, String authorName, String reportTitle) {
+        String subject = "Votre signalement a bien ete recu - AccessMap";
+        String body = String.format(
+            "Bonjour %s,%n%n" +
+            "Merci pour votre contribution !%n%n" +
+            "Votre signalement \"%s\" a bien ete recu et est en cours d'examen par notre equipe de moderation.%n%n" +
+            "Vous recevrez un email des qu'il aura ete traite.%n%n" +
+            "A bientot sur AccessMap,%n" +
+            "L'equipe AccessMap%n" +
+            "https://app-accessmap.netlify.app",
+            authorName, reportTitle);
+        send(toEmail, subject, body);
     }
 
-    public void sendReportRejectedEmail(String to, String category) {
-        sendEmail(to,
-            "❌ Votre signalement AccessMap n'a pas été retenu",
-            "Bonjour,\n\n" +
-            "Votre signalement de type \"" + category + "\" n'a pas pu être validé.\n" +
-            "Il ne correspond peut-être pas aux critères d'accessibilité de la plateforme.\n\n" +
-            "N'hésitez pas à soumettre d'autres signalements !\n\n" +
-            "L'équipe AccessMap\nhttps://app-accessmap.netlify.app"
-        );
+    public void sendNewReportToAdmin(String authorName, String reportTitle, String category, String reportId) {
+        String subject = "Nouveau signalement a moderer - AccessMap";
+        String body = String.format(
+            "Bonjour,%n%n" +
+            "Un nouveau signalement est en attente de moderation.%n%n" +
+            "Contributeur : %s%n" +
+            "Titre        : %s%n" +
+            "Categorie    : %s%n%n" +
+            "Rendez-vous sur le panneau d'administration :%n" +
+            "https://app-accessmap.netlify.app/admin%n%n" +
+            "- AccessMap",
+            authorName, reportTitle, category);
+        send(adminEmail, subject, body);
     }
 
-    public void sendVoteNotificationEmail(String to, String category, int votesUp, int votesDown) {
-        sendEmail(to,
-            "👍 Votre signalement AccessMap a reçu des votes",
-            "Bonjour,\n\n" +
-            "Votre signalement de type \"" + category + "\" a reçu de nouveaux votes :\n" +
-            "👍 " + votesUp + " vote(s) positif(s)\n" +
-            "👎 " + votesDown + " vote(s) négatif(s)\n\n" +
-            "Merci de contribuer à AccessMap !\n\n" +
-            "L'équipe AccessMap\nhttps://app-accessmap.netlify.app"
-        );
+    public void sendReportValidatedToContributor(String toEmail, String authorName, String reportTitle) {
+        String subject = "Votre signalement a ete valide - AccessMap";
+        String body = String.format(
+            "Bonjour %s,%n%n" +
+            "Bonne nouvelle !%n%n" +
+            "Votre signalement \"%s\" a ete valide par notre equipe.%n" +
+            "Il est desormais visible sur la carte et dans l'espace communautaire.%n%n" +
+            "Merci de contribuer a rendre la ville plus accessible pour tous.%n%n" +
+            "Voir la communaute : https://app-accessmap.netlify.app/community%n%n" +
+            "- L'equipe AccessMap",
+            authorName, reportTitle);
+        send(toEmail, subject, body);
     }
 
-    public void sendWeeklyRecapEmail(String to, String displayName, int totalReports, int validated, int votesUp) {
-        sendEmail(to,
-            "📊 Votre récapitulatif hebdomadaire AccessMap",
-            "Bonjour " + displayName + ",\n\n" +
-            "Voici votre résumé de la semaine :\n\n" +
-            "📍 Signalements créés (total) : " + totalReports + "\n" +
-            "✅ Signalements validés (total) : " + validated + "\n" +
-            "👍 Votes positifs reçus (total) : " + votesUp + "\n\n" +
-            "Continuez comme ça, vous aidez des milliers de personnes !\n\n" +
-            "L'équipe AccessMap\nhttps://app-accessmap.netlify.app"
-        );
+    public void sendReportRejectedToContributor(String toEmail, String authorName, String reportTitle) {
+        String subject = "Votre signalement n'a pas ete retenu - AccessMap";
+        String body = String.format(
+            "Bonjour %s,%n%n" +
+            "Apres examen, votre signalement \"%s\" n'a pas pu etre valide.%n%n" +
+            "Cela peut etre du a un doublon, un manque d'informations, ou un contenu ne correspondant pas aux criteres d'AccessMap.%n%n" +
+            "Vous pouvez soumettre un nouveau signalement a tout moment :%n" +
+            "https://app-accessmap.netlify.app/report/new%n%n" +
+            "Merci pour votre comprehension.%n%n" +
+            "- L'equipe AccessMap",
+            authorName, reportTitle);
+        send(toEmail, subject, body);
+    }
+
+    private void send(String to, String subject, String body) {
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom("noreply@accessmap.app");
+            msg.setTo(to);
+            msg.setSubject(subject);
+            msg.setText(body);
+            mailSender.send(msg);
+            log.info("Email envoye a {} : {}", to, subject);
+        } catch (Exception e) {
+            log.error("Echec envoi email a {} : {}", to, e.getMessage());
+        }
     }
 }

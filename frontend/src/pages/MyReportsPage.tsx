@@ -7,14 +7,6 @@ import { CAT_MAP } from '../constants/categories';
 
 const REPORT_API = import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082';
 
-const CAT_MAP: Record<string, { label: string; color: string }> = {
-  STEP:     { label: 'Marche',       color: '#F97316' },
-  RAMP:     { label: 'Rampe',        color: '#4B55E8' },
-  ELEVATOR: { label: 'Ascenseur',    color: '#22C55E' },
-  SIDEWALK: { label: 'Trottoir',     color: '#06B6D4' },
-  SIGNAGE:  { label: 'Signalétique', color: '#E879A0' },
-  PARKING:  { label: 'Parking',      color: '#9CA3AF' },
-};
 
 const CATEGORIES = Object.entries(CAT_MAP).map(([id, v]) => ({ id, label: v.label }));
 

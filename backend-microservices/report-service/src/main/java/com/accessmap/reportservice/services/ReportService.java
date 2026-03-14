@@ -1,180 +1,113 @@
 package com.accessmap.reportservice.services;
 
-import com.accessmap.reportservice.dto.ReportRequest;
-import com.accessmap.reportservice.models.*;
+import com.accessmap.reportservice.dto.CreateReportRequest;
+import com.accessmap.reportservice.models.Report;
+import com.accessmap.reportservice.models.Status;
 import com.accessmap.reportservice.repositories.ReportRepository;
 import com.accessmap.reportservice.repositories.VoteRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.client.RestTemplate;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
-/**
- * Service signalements — CRUD + votes + requêtes géospatiales PostGIS.
- */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Slf4j
 public class ReportService {
 
-    @Value("${notification.service.url:https://notification-service-hhbj.onrender.com}")
-    private String notifUrl;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    private void notifyAsync(String url) {
-        try { restTemplate.postForEntity(url, null, Void.class); }
-        catch (Exception e) { /* notification non bloquante */ }
-    }
-
     private final ReportRepository reportRepository;
-    private final VoteRepository voteRepository;
+    private final VoteRepository   voteRepository;
+    private final RestTemplate     restTemplate;
 
-    /** Factory JTS avec SRID 4326 (WGS84 — coordonnées GPS standard) */
-    private static final GeometryFactory GEOMETRY_FACTORY =
-            new GeometryFactory(new PrecisionModel(), 4326);
-
-    // ── Lecture ─────────────────────────────────────────────────────────────
-
-    public List<Report> getPendingReports() {
-        return reportRepository.findByStatus(Status.PENDING);
-    }
-
-    public List<Report> getAllReports() {
-        return reportRepository.findAll();
-    }
-
-    public Optional<Report> getReportById(UUID id) {
-        return reportRepository.findById(id);
-    }
-
-    public List<Report> getReportsByUser(UUID userId) {
-        return reportRepository.findByCreatedBy(userId);
-    }
-
-    public List<Report> getReportsByStatus(Status status) {
-        return reportRepository.findByStatus(status);
-    }
-
-    public List<Report> getReportsNearby(double lat, double lon, double radiusMeters) {
-        return reportRepository.findWithinRadius(lat, lon, radiusMeters);
-    }
-
-    // ── Création / Modification ──────────────────────────────────────────────
+    @Value("${notification.service.url:https://notification-service-hhbj.onrender.com}")
+    private String notificationUrl;
 
     @Transactional
-    public Report createReport(ReportRequest req) {
-        Report report = new Report();
-        report.setLocation(buildPoint(req.getLatitude(), req.getLongitude()));
-        report.setCategory(req.getCategory());
-        report.setDescription(req.getDescription());
-        report.setPhotoUrl(req.getPhotoUrl());
-        report.setCreatedBy(UUID.fromString(req.getCreatedBy()));
-        report.setStatus(Status.PENDING);
+    public Report createReport(CreateReportRequest req) {
+        Report report = Report.builder()
+            .userId(req.getUserId())
+            .authorName(req.getAuthorName())
+            .authorEmail(req.getAuthorEmail())
+            .title(req.getTitle())
+            .description(req.getDescription())
+            .category(req.getCategory())
+            .latitude(req.getLatitude())
+            .longitude(req.getLongitude())
+            .imageUrl(req.getImageUrl())
+            .build();
+
         Report saved = reportRepository.save(report);
-        // Notifier l'auteur du vote (non bloquant)
-        notifyAsync(notifUrl + "/api/notifications/vote-notification?to=&category="
-            + saved.getCategory().name()
-            + "&votesUp=" + saved.getVotesUp()
-            + "&votesDown=" + saved.getVotesDown());
+
+        notifyAsync("SUBMITTED", saved.getAuthorEmail(), saved.getAuthorName(),
+                    saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
+
+        notifyAsync("NEW_REPORT_ADMIN", null, saved.getAuthorName(),
+                    saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
+
         return saved;
     }
 
     @Transactional
-    public Report updateStatus(UUID id, Status newStatus) {
+    public Report updateStatus(UUID id, Status status) {
         Report report = reportRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Signalement introuvable : " + id));
-        report.setStatus(newStatus);
+            .orElseThrow(() -> new RuntimeException("Report not found"));
+
+        report.setStatus(status);
         Report saved = reportRepository.save(report);
-        // Notification email à l'auteur
-        String category = saved.getCategory() != null ? saved.getCategory().name() : "";
-        if (newStatus == Status.VALIDATED) {
-            notifyAsync(notifUrl + "/api/notifications/report-validated?to=&category=" + category);
-        } else if (newStatus == Status.REJECTED) {
-            notifyAsync(notifUrl + "/api/notifications/report-rejected?to=&category=" + category);
-        }
+
+        String type = (status == Status.VALIDATED) ? "VALIDATED" : "REJECTED";
+        notifyAsync(type, saved.getAuthorEmail(), saved.getAuthorName(),
+                    saved.getTitle(), saved.getCategory().name(), saved.getId().toString());
+
         return saved;
     }
 
     @Transactional
-    public Report updateReport(UUID id, ReportRequest request) {
+    public void deleteReport(UUID id, UUID userId) {
         Report report = reportRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Report not found"));
-        if (!report.getCreatedBy().equals(UUID.fromString(request.getCreatedBy()))) {
-            throw new RuntimeException("Forbidden: you can only edit your own reports");
-        }
-        if (request.getCategory() != null) report.setCategory(Category.valueOf(request.getCategory().toString()));
-        report.setDescription(request.getDescription());
-        if (request.getPhotoUrl() != null) report.setPhotoUrl(request.getPhotoUrl());
-        return reportRepository.save(report);
+            .orElseThrow(() -> new RuntimeException("Report not found"));
+        if (!report.getUserId().equals(userId))
+            throw new RuntimeException("Unauthorized");
+
+        voteRepository.deleteByReportId(id);
+        reportRepository.delete(report);
     }
 
-    @Transactional
-    public void deleteReport(UUID id, UUID requestingUserId) {
-        Report report = reportRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Report not found"));
-        if (!report.getCreatedBy().equals(requestingUserId)) {
-            throw new RuntimeException("Forbidden: you can only delete your own reports");
+    public List<Report> getAllReports()             { return reportRepository.findAll(); }
+    public List<Report> getByStatus(Status status) { return reportRepository.findByStatus(status); }
+    public List<Report> getByUserId(UUID userId)   { return reportRepository.findByUserId(userId); }
+    public List<Report> getPendingReports()        { return reportRepository.findByStatus(Status.PENDING); }
+    public Optional<Report> getById(UUID id)       { return reportRepository.findById(id); }
+
+    @Async
+    protected void notifyAsync(String type, String toEmail, String authorName,
+                               String reportTitle, String category, String reportId) {
+        try {
+            Map<String, String> body = new HashMap<>();
+            body.put("type",        type);
+            body.put("toEmail",     toEmail != null ? toEmail : "");
+            body.put("authorName",  authorName);
+            body.put("reportTitle", reportTitle);
+            body.put("category",    category);
+            body.put("reportId",    reportId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            restTemplate.postForEntity(
+                notificationUrl + "/api/notifications/send",
+                new HttpEntity<>(body, headers),
+                Void.class
+            );
+            log.info("Notification [{}] envoyee pour {}", type, authorName);
+        } catch (Exception e) {
+            log.warn("Notification [{}] non envoyee : {}", type, e.getMessage());
         }
-        // Supprimer les votes associés d'abord
-        voteRepository.deleteAll(voteRepository.findByReportId(id));
-        reportRepository.deleteById(id);
-    }
-
-    // ── Votes ────────────────────────────────────────────────────────────────
-
-    @Transactional
-    public Report vote(UUID reportId, UUID userId, VoteType voteType) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Signalement introuvable"));
-
-        Optional<Vote> existingVote = voteRepository.findByReportIdAndUserId(reportId, userId);
-
-        if (existingVote.isPresent()) {
-            Vote vote = existingVote.get();
-            if (vote.getType().equals(voteType)) {
-                // Vote identique → annulation
-                if (voteType == VoteType.UP) report.setVotesUp(Math.max(0, report.getVotesUp() - 1));
-                else report.setVotesDown(Math.max(0, report.getVotesDown() - 1));
-                voteRepository.delete(vote);
-            } else {
-                // Changement de vote
-                if (voteType == VoteType.UP) {
-                    report.setVotesUp(report.getVotesUp() + 1);
-                    report.setVotesDown(Math.max(0, report.getVotesDown() - 1));
-                } else {
-                    report.setVotesDown(report.getVotesDown() + 1);
-                    report.setVotesUp(Math.max(0, report.getVotesUp() - 1));
-                }
-                vote.setType(voteType);
-                voteRepository.save(vote);
-            }
-        } else {
-            // Nouveau vote
-            Vote vote = new Vote(null, reportId, userId, voteType);
-            voteRepository.save(vote);
-            if (voteType == VoteType.UP) report.setVotesUp(report.getVotesUp() + 1);
-            else report.setVotesDown(report.getVotesDown() + 1);
-        }
-
-        return reportRepository.save(report);
-    }
-
-    // ── Utilitaires ──────────────────────────────────────────────────────────
-
-    /** Construit un Point JTS à partir de lat/lon avec SRID WGS84 */
-    private Point buildPoint(double lat, double lon) {
-        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(lon, lat));
-        point.setSRID(4326);
-        return point;
     }
 }

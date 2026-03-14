@@ -2,18 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { CAT_MAP } from '../constants/categories';
 import toast from 'react-hot-toast';
-import { CAT_MAP } from '../constants/categories';
 
 const REPORT_API = import.meta.env.VITE_REPORT_API_URL || 'http://localhost:8082';
-
-const CAT_MAP: Record<string, { label: string; color: string }> = {
-  STEP:     { label: 'Marche',       color: '#F97316' },
-  RAMP:     { label: 'Rampe',        color: '#4B55E8' },
-  ELEVATOR: { label: 'Ascenseur',    color: '#22C55E' },
-  SIDEWALK: { label: 'Trottoir',     color: '#06B6D4' },
-  SIGNAGE:  { label: 'Signaletique', color: '#E879A0' },
-  PARKING:  { label: 'Parking',      color: '#9CA3AF' },
-};
 
 export default function AdminPage() {
   const { role } = useAuth();
@@ -40,9 +30,9 @@ export default function AdminPage() {
       );
       if (!res.ok) throw new Error();
       setReports(prev => prev.filter(r => r.id !== id));
-      toast.success(status === 'VALIDATED' ? 'Signalement valide' : 'Signalement rejete');
+      toast.success(status === 'VALIDATED' ? 'Signalement validé ✅' : 'Signalement rejeté');
     } catch {
-      toast.error('Erreur lors de la moderation');
+      toast.error('Erreur lors de la modération');
     }
     setActionId(null);
   };
@@ -50,7 +40,7 @@ export default function AdminPage() {
   if (role !== 'ADMIN' && role !== 'MODERATOR') {
     return (
       <div style={{ minHeight: '100dvh', background: '#07071A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif" }}>
-        <p style={{ color: '#EF4444', fontSize: 16 }}>Acces refuse</p>
+        <p style={{ color: '#EF4444', fontSize: 16 }}>Accès refusé</p>
       </div>
     );
   }
@@ -64,7 +54,7 @@ export default function AdminPage() {
               <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
             </svg>
           </div>
-          <h1 style={{ color: '#F0F2FF', fontSize: 22, fontWeight: 700, margin: 0 }}>Moderation</h1>
+          <h1 style={{ color: '#F0F2FF', fontSize: 22, fontWeight: 700, margin: 0 }}>Modération</h1>
         </div>
         <p style={{ color: 'rgba(240,242,255,0.35)', fontSize: 13, margin: 0 }}>
           {reports.length} signalement{reports.length !== 1 ? 's' : ''} en attente
@@ -83,7 +73,7 @@ export default function AdminPage() {
             <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#22C55E" strokeWidth={2}><path d="M5 13l4 4L19 7"/></svg>
           </div>
           <p style={{ color: 'rgba(240,242,255,0.5)', fontSize: 15 }}>Aucun signalement en attente</p>
-          <p style={{ color: 'rgba(240,242,255,0.25)', fontSize: 13 }}>Tous les signalements ont ete traites</p>
+          <p style={{ color: 'rgba(240,242,255,0.25)', fontSize: 13 }}>Tous les signalements ont été traités</p>
         </div>
       )}
 
@@ -101,29 +91,49 @@ export default function AdminPage() {
                     {new Date(r.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 </div>
+
+                {/* ── Titre ── */}
+                {r.title && (
+                  <p style={{ color: '#F0F2FF', fontSize: 15, fontWeight: 600, margin: '0 0 6px' }}>{r.title}</p>
+                )}
+
                 {r.description && (
-                  <p style={{ color: '#F0F2FF', fontSize: 14, margin: '0 0 10px', lineHeight: 1.5 }}>{r.description}</p>
+                  <p style={{ color: 'rgba(240,242,255,0.7)', fontSize: 14, margin: '0 0 10px', lineHeight: 1.5 }}>{r.description}</p>
                 )}
-                {r.photoUrl && (
-                  <img src={r.photoUrl} alt="Photo" style={{ width: '100%', borderRadius: 10, marginBottom: 10, objectFit: 'cover', maxHeight: 200 }} />
+
+                {r.imageUrl && (
+                  <img src={r.imageUrl} alt="Photo" style={{ width: '100%', borderRadius: 10, marginBottom: 10, objectFit: 'cover', maxHeight: 200 }} />
                 )}
-                <div style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11, marginBottom: 14 }}>
-                  {r.latitude?.toFixed(5)}, {r.longitude?.toFixed(5)}
+
+                {/* ── Auteur ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(75,85,232,0.08)', border: '1px solid rgba(75,85,232,0.15)', borderRadius: 10, marginBottom: 12 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#4B55E8,#818CF8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                    {(r.authorName || 'A')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p style={{ color: '#818CF8', fontSize: 13, fontWeight: 600, margin: 0 }}>{r.authorName || 'Anonyme'}</p>
+                    {r.authorEmail && <p style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11, margin: 0 }}>{r.authorEmail}</p>}
+                  </div>
                 </div>
+
+                <div style={{ color: 'rgba(240,242,255,0.3)', fontSize: 11, marginBottom: 14 }}>
+                  📍 {r.latitude?.toFixed(5)}, {r.longitude?.toFixed(5)}
+                </div>
+
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
                     onClick={() => handleAction(r.id, 'VALIDATED')}
                     disabled={!!actionId}
                     style={{ flex: 1, padding: '11px', border: 'none', borderRadius: 12, background: 'rgba(34,197,94,0.15)', color: '#22C55E', fontSize: 14, fontWeight: 700, cursor: actionId ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: actionId && actionId !== r.id + 'VALIDATED' ? 0.5 : 1 }}
                   >
-                    {actionId === r.id + 'VALIDATED' ? '...' : 'Valider'}
+                    {actionId === r.id + 'VALIDATED' ? '...' : '✅ Valider'}
                   </button>
                   <button
                     onClick={() => handleAction(r.id, 'REJECTED')}
                     disabled={!!actionId}
                     style={{ flex: 1, padding: '11px', border: 'none', borderRadius: 12, background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontSize: 14, fontWeight: 700, cursor: actionId ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: actionId && actionId !== r.id + 'REJECTED' ? 0.5 : 1 }}
                   >
-                    {actionId === r.id + 'REJECTED' ? '...' : 'Rejeter'}
+                    {actionId === r.id + 'REJECTED' ? '...' : '❌ Rejeter'}
                   </button>
                 </div>
               </div>
@@ -131,6 +141,7 @@ export default function AdminPage() {
           })}
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
