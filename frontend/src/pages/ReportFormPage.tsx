@@ -138,7 +138,7 @@ export default function ReportFormPage() {
       const authorEmail = email        || localStorage.getItem('email')        || '';
       const title       = CAT_MAP[category]?.label || category;
 
-      const res = await apiFetch(`${API_URL}/api/reports`, {
+      const res = await apiFetch(`${API_URL}/api/reports`, { signal: AbortSignal.timeout(180000),
         method: 'POST',
         body: JSON.stringify({
           userId,
@@ -155,7 +155,7 @@ export default function ReportFormPage() {
       if (!res.ok) throw new Error();
       toast.success('Signalement créé !');
       navigate('/my-reports');
-    } catch { toast.error('Erreur lors de la création'); }
+    } catch (err: any) { toast.error(err?.name === 'TimeoutError' ? 'Serveur en cours de démarrage, réessayez dans 30 secondes ☕' : 'Erreur lors de la création'); }
     setSubmitting(false);
   };
 
