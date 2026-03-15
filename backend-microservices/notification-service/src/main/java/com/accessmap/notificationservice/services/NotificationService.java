@@ -12,7 +12,7 @@ import java.util.Map;
 @Slf4j
 public class NotificationService {
 
-    @Value("${brevo.api.key}")
+    @Value("${brevo.api.key:placeholder}")
     private String apiKey;
 
     @Value("${app.admin.email:azlinedlopes@gmail.com}")
